@@ -4,11 +4,22 @@
 
 > BaoCanMou · [www.bcmsj.com](https://www.bcmsj.com) · Open source for exchange and learning
 
-BaoCanMou AI Skill Center is a local-first desktop application for governing AI capabilities across tools. It reads the user's own `~/.agents/skills`, adds Chinese names, explicit purposes, feature labels, and risk signals, then connects selected Skills to Codex, Claude Code, Gemini CLI, Cursor, Hermes, ZCode, OpenCode, and Windsurf.
+BaoCanMou AI Skill Center helps you find, understand, and use local AI skills. It reads your own `~/.agents/skills`, explains each skill's purpose, features, and required input in Chinese, and preserves its original ID for use in Codex, Claude Code, and other tools.
 
-## Original v1.1 core
+## v1.3 Clear edition
 
-The BaoCanMou “Fangce Five-Loop” model continues to define the v1.1 product logic:
+- Nine task-based entry points, from branding and writing to presentations, images, video, development, research, documents, and AI utilities.
+- Readable cards with purpose and features; search by Chinese name, English ID, or description.
+- Preparation instructions, scope notes, and a ready-to-copy request template for every skill.
+- Slide-image styles remain distinct from editable presentation workflows.
+- Larger text and expandable technical details, preserving the original black, cream, and gold visual identity.
+- Bilingual interface. Display categories never move, delete, or disable skill sources.
+
+Open the app from Applications → choose a task → open usage → copy the example → fill in your request → send it to Codex or Claude. The center does not execute skills itself. See the [User Guide](docs/User-Guide.en.md).
+
+## Original core
+
+The BaoCanMou “Fangce Five-Loop” model continues to define the underlying logic:
 
 1. **Discover** local facts from the center and real tool paths.
 2. **Interpret** Skills in Chinese while preserving English IDs and contracts.
@@ -16,11 +27,9 @@ The BaoCanMou “Fangce Five-Loop” model continues to define the v1.1 product 
 4. **Route** Skills through controlled links or a marked Windows fallback copy.
 5. **Verify** by rescanning the filesystem after every connection change.
 
-The v1.1 application does not include the previous project's database, installer, sync engine, or interface modules. Its core is implemented in [`src-tauri/src/center.rs`](src-tauri/src/center.rs) and [`src/App.tsx`](src/App.tsx).
+The application does not include the previous project's database, installer, sync engine, or interface modules. Its core is implemented in [`src-tauri/src/center.rs`](src-tauri/src/center.rs) and [`src/App.tsx`](src/App.tsx).
 
 The App icon and in-product brand mark are generated from the same original vector master at [`src/assets/baocanmou-mark.svg`](src/assets/baocanmou-mark.svg).
-
-![BaoCanMou AI Skill Center v1.0 command view reading 194 local Skills](docs/assets/app-v1-overview.jpg)
 
 ## Every Skill is understandable
 
@@ -32,11 +41,7 @@ The App icon and in-product brand mark are generated from the same original vect
 - Fewer than three examples are labeled honestly; the app does not pad the count with another Skill's images or generic placeholders.
 - Editable Chinese text stored locally in `~/.baocanmou/skill-center/translations.json` without modifying third-party `SKILL.md` files.
 
-![BaoCanMou AI Skill Center asset view](docs/assets/app-v1-assets.jpg)
-
-The detail view keeps the primary use, feature labels, Chinese interpretation, tool routing, and source content together. Developer examples remain supplementary and appear only when provided by the Skill itself.
-
-![BaoCanMou AI Skill Center detail view](docs/assets/app-v1-skill-detail.jpg)
+The detail view puts purpose, features, and usage examples first. Chinese editing, AI connections, and source text can be expanded when needed. Developer examples appear only when provided by the Skill itself.
 
 ## External capability intelligence
 

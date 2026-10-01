@@ -24,7 +24,7 @@ export interface SkillAsset {
   fileCount: number
   contentHash: string
   modifiedAt: number
-  translationMode: 'native' | 'generated' | 'custom' | 'pending'
+  translationMode: 'native' | 'curated' | 'generated' | 'custom' | 'pending'
   previewKind: 'screenshot' | 'generated'
   previewCount: number
   connections: SkillConnection[]

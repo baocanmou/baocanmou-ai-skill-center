@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "包参谋 AI 技能中心",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "identifier": "com.baocanmou.ai-skill-center",
   "build": {
     "frontendDist": "../dist",

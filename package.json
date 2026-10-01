@@ -1,7 +1,7 @@
 {
   "name": "baocanmou-ai-skill-center",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "BaoCanMou original local-first AI skill governance center.",
   "author": "BaoCanMou (包参谋) <https://www.bcmsj.com>",
   "license": "MIT",
@@ -30,7 +30,7 @@
     "version:check": "node scripts/version.mjs check",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "npm run version:check && tauri build",
+    "tauri:build": "npm run version:check && tauri build --features custom-protocol",
     "tauri:build:mac:dmg": "npm run tauri:build -- --bundles dmg"
   },
   "dependencies": {

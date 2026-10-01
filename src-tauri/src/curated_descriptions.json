@@ -1,0 +1,274 @@
+{
+  "qianwen-audio-tts": {
+    "source_sha256": "f6bc06af4a50fff9718b5702f8f582173edf16a53ce67b392e3bfe44d949e0c9",
+    "name_zh": "千问语音合成",
+    "category": "content",
+    "purpose_zh": "使用 Qwen TTS 把文字转成配音或朗读音频；不用于语音识别。",
+    "purpose_en": "Convert text into voiceovers or read-aloud audio with Qwen TTS; not speech recognition.",
+    "features_zh": [
+      "文字转语音",
+      "旁白与朗读",
+      "需千问接口权限"
+    ],
+    "features_en": [
+      "Text to speech",
+      "Voiceovers and narration",
+      "Qwen API access required"
+    ]
+  },
+  "qianwen-find-skills": {
+    "source_sha256": "d242c605cf5d329af0e08dc5089cf59c62dabc2d3711fd6e2246a210ec4fbe72",
+    "name_zh": "千问技能查找",
+    "category": "automation",
+    "purpose_zh": "发现、比较千问发布的 Agent Skills，并在用户要求时安装选定技能。",
+    "purpose_en": "Discover and compare published QianWen Agent Skills, installing a selected skill only when requested.",
+    "features_zh": [
+      "按任务找技能",
+      "比较候选能力",
+      "按需安装"
+    ],
+    "features_en": [
+      "Task-based discovery",
+      "Compare candidates",
+      "Installation on request"
+    ]
+  },
+  "qianwen-image-generation": {
+    "source_sha256": "2c3c7530aa964af3ce869befef0f8821ff6ac9112731d7d555860131b94eb2a8",
+    "name_zh": "千问图像生成",
+    "category": "image",
+    "purpose_zh": "通过 Wan 与 Qwen Image 模型生成或编辑图片，支持参考图改图、风格转换和图文输出。",
+    "purpose_en": "Generate or edit images with Wan and Qwen Image, including reference-based edits, style transfer, and text-image output.",
+    "features_zh": [
+      "文字生成图片",
+      "参考图编辑",
+      "风格转换"
+    ],
+    "features_en": [
+      "Text to image",
+      "Reference-image editing",
+      "Style transfer"
+    ]
+  },
+  "qianwen-model-selector": {
+    "source_sha256": "42616c4a350fbf115f83c5d423f77941aab2ac627cea6876c6f9b7587d1c469c",
+    "name_zh": "千问模型选择",
+    "category": "automation",
+    "purpose_zh": "比较千问模型的能力、参数和价格，为具体任务选择模型；不负责其他厂商模型选型。",
+    "purpose_en": "Compare Qwen capabilities, parameters, and pricing to choose a model for a task; not a selector for other providers.",
+    "features_zh": [
+      "模型能力比较",
+      "参数建议",
+      "价格与用量参考"
+    ],
+    "features_en": [
+      "Capability comparison",
+      "Parameter advice",
+      "Pricing and usage guidance"
+    ]
+  },
+  "qianwen-ops-auth": {
+    "source_sha256": "f33eae42104ed900ff80b7e94fc8f39f31917b287d2b9095d974ee3278ccf8d1",
+    "name_zh": "千问接口认证",
+    "category": "automation",
+    "purpose_zh": "配置千问 API 密钥与接口端点，排查凭据缺失、401 和认证失败；密钥不写入报告。",
+    "purpose_en": "Configure Qwen API credentials and endpoints and diagnose missing credentials or authentication errors; keep secrets out of reports.",
+    "features_zh": [
+      "API 认证配置",
+      "接口端点核对",
+      "401 错误排查"
+    ],
+    "features_en": [
+      "API authentication",
+      "Endpoint checks",
+      "Diagnose 401 errors"
+    ]
+  },
+  "qianwen-payment": {
+    "source_sha256": "ac77bd5a731f4919f0e82e91ede0c90bb4dfcf7fc81067fa02fe16c918c8a3f0",
+    "name_zh": "千问余额与充值",
+    "category": "automation",
+    "purpose_zh": "查询 QianWenAI 现金余额、充值订单及结果；仅在确认金额后发起充值，不用于普通商户付款。",
+    "purpose_en": "Query QianWenAI cash balance, recharge orders, and results. Start a recharge only after the amount is confirmed; not for unrelated merchant payments.",
+    "features_zh": [
+      "现金余额查询",
+      "充值订单与二维码",
+      "充值结果与历史"
+    ],
+    "features_en": [
+      "Cash balance",
+      "Recharge orders and QR recovery",
+      "Recharge results and history"
+    ]
+  },
+  "qianwen-text": {
+    "source_sha256": "4b979748099982770780c47575c493294a2e98ff15816ab744fb86b0264b96f4",
+    "name_zh": "千问文本与代码",
+    "category": "content",
+    "purpose_zh": "调用千问模型完成对话、文字生成、推理、代码编写和函数调用；不用于图片或视频生成。",
+    "purpose_en": "Use Qwen for conversation, text generation, reasoning, coding, and function calling; not image or video generation.",
+    "features_zh": [
+      "对话与写作",
+      "代码与推理",
+      "函数调用"
+    ],
+    "features_en": [
+      "Conversation and writing",
+      "Coding and reasoning",
+      "Function calling"
+    ]
+  },
+  "qianwen-update-check": {
+    "source_sha256": "b1c912f38ff65955bde66059625fd51793a1cd76e8998a5f3951fc0e599cdd39",
+    "name_zh": "千问工具更新检查",
+    "category": "automation",
+    "purpose_zh": "检查 qianwen-ai 是否有新版本并提示更新信息；不是所有 AI 软件的通用更新工具。",
+    "purpose_en": "Check for qianwen-ai updates and report available versions; not a general updater for all AI software.",
+    "features_zh": [
+      "千问版本检查",
+      "新版本提示",
+      "不覆盖其他软件"
+    ],
+    "features_en": [
+      "QianWen version checks",
+      "Update notifications",
+      "QianWen-only scope"
+    ]
+  },
+  "qianwen-usage": {
+    "source_sha256": "68185d7816f94d6aa1270f33e3bd0685c76078e3c51540aae7cded7aaa2dd40f",
+    "name_zh": "千问账号与用量",
+    "category": "automation",
+    "purpose_zh": "管理千问账号登录，查询用量、账单、订阅和调用日志；充值请使用“千问余额与充值”。",
+    "purpose_en": "Manage QianWen sign-in and inspect usage, bills, subscriptions, and request logs. Use qianwen-payment for recharges.",
+    "features_zh": [
+      "登录与账号",
+      "用量账单与订阅",
+      "调用日志与限额"
+    ],
+    "features_en": [
+      "Account sign-in",
+      "Usage, bills, and subscriptions",
+      "Request logs and spending limits"
+    ]
+  },
+  "qianwen-video-generation": {
+    "source_sha256": "e8fff434a4a99e9622c5f4f0b91f8700a0e5a9f6544e14f73affa6d44261a97d",
+    "name_zh": "千问视频生成",
+    "category": "video",
+    "purpose_zh": "通过 Wan 与 HappyHorse 模型制作或编辑视频，支持文字、图片、首尾帧和参考角色输入。",
+    "purpose_en": "Generate or edit videos with Wan and HappyHorse using text, images, first and last frames, or reference characters.",
+    "features_zh": [
+      "文字或图片生视频",
+      "首尾帧与角色参考",
+      "视频编辑"
+    ],
+    "features_en": [
+      "Text or image to video",
+      "Frame and character references",
+      "Video editing"
+    ]
+  },
+  "qianwen-vision": {
+    "source_sha256": "cdfa829cd12689756751027e445f2b1aa6fbeb34e66068882c9f472a5b3b0e44",
+    "name_zh": "千问图像视频理解",
+    "category": "data",
+    "purpose_zh": "让千问分析已有图片或视频，读取文字、图表和场景信息；这是视觉理解，不是生成图片或视频。",
+    "purpose_en": "Analyze existing images and videos with Qwen, including OCR, charts, and scene information; visual understanding, not media generation.",
+    "features_zh": [
+      "图片与视频分析",
+      "OCR 文字提取",
+      "图表读取与多图比较"
+    ],
+    "features_en": [
+      "Image and video analysis",
+      "OCR extraction",
+      "Chart reading and image comparison"
+    ]
+  },
+  "qianwenai-deploy": {
+    "source_sha256": "150ad93528893afac5a003223a7dd6ec108cf991aab2524ace2db4902ef25951",
+    "name_zh": "阿里云国内站部署",
+    "category": "devops",
+    "purpose_zh": "将项目部署或更新到阿里云国内站；先确认资源费用与上线范围，再创建资源并验证服务。",
+    "purpose_en": "Deploy or update a project on Alibaba Cloud's China site, confirming resource costs and release scope before provisioning and service verification.",
+    "features_zh": [
+      "全栈项目部署",
+      "ROS 资源编排",
+      "费用确认与服务探活"
+    ],
+    "features_en": [
+      "Full-stack deployment",
+      "ROS provisioning",
+      "Cost confirmation and health checks"
+    ]
+  },
+  "qianwenai-observe": {
+    "source_sha256": "5b654161f69ce88898eb36a6a63e7eaaa2b9075b8af4a67ffa52d91feb9213d6",
+    "name_zh": "云应用健康与费用",
+    "category": "devops",
+    "purpose_zh": "只读检查 qianwenai-deploy 已部署应用的健康、性能与费用；需要项目中的部署状态文件。",
+    "purpose_en": "Read health, performance, and costs for an app deployed by qianwenai-deploy, using its project deployment-state file.",
+    "features_zh": [
+      "应用可用性概览",
+      "ECS/RDS 性能",
+      "实际费用汇总"
+    ],
+    "features_en": [
+      "Application availability",
+      "ECS/RDS performance",
+      "Actual cost summary"
+    ]
+  },
+  "qianwenai-operate": {
+    "source_sha256": "b235f235f532d85e3905dcbcdef5b72536383c97db97283caa975de4bf669be2",
+    "name_zh": "云应用诊断与恢复",
+    "category": "devops",
+    "purpose_zh": "诊断 qianwenai-deploy 应用故障，说明影响并逐项确认后执行恢复，再验证实际结果。",
+    "purpose_en": "Diagnose a qianwenai-deploy app, explain impact, confirm each recovery action, then execute and verify the result.",
+    "features_zh": [
+      "先做只读诊断",
+      "逐项确认恢复动作",
+      "恢复结果回验"
+    ],
+    "features_en": [
+      "Read-only diagnosis first",
+      "Per-action approval",
+      "Recovery verification"
+    ]
+  },
+  "typesafe-ai": {
+    "source_sha256": "3c6504379881d4bf64c2ebae2cb8a6768c2090a22770899b9973e4ddc468c461",
+    "name_zh": "TypeSafe 语义判断",
+    "category": "data",
+    "purpose_zh": "用 TypeSafe／Jev 将自然语言转成带类型的判断与概率，辅助分类、排序和核验；模型判断不等于事实或执行授权。",
+    "purpose_en": "Use TypeSafe and Jev to turn natural language into typed judgments and probabilities for classification, ranking, and verification; judgments are not facts or action authorization.",
+    "features_zh": [
+      "结构化语义判断",
+      "分类排序与核验",
+      "返回概率供程序使用"
+    ],
+    "features_en": [
+      "Typed semantic judgments",
+      "Classification, ranking, verification",
+      "Probabilities for application logic"
+    ]
+  },
+  "yao-geo-baidu-keywords": {
+    "source_sha256": "ac0070b664c7e93d307e507514838cec891160d14bc2b0cda9c6cd22382a2743",
+    "name_zh": "百度关键词拓展",
+    "category": "marketing",
+    "purpose_zh": "采集百度联想词与相关搜索，按行业和转化目标判断商业价值，整理成带截图的 Excel；不提供搜索量或竞价数据。",
+    "purpose_en": "Collect Baidu suggestions and related searches, assess commercial intent for an industry, and deliver an Excel workbook with screenshots; not search-volume or bid data.",
+    "features_zh": [
+      "联想词与相关搜索",
+      "按行业评商业价值",
+      "Excel 与真实截图"
+    ],
+    "features_en": [
+      "Suggestions and related searches",
+      "Industry-specific commercial intent",
+      "Excel and real screenshots"
+    ]
+  }
+}

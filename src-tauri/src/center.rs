@@ -179,27 +179,9 @@ fn tool_specs() -> [ToolSpec; 8] {
 
 pub fn scan() -> io::Result<CenterSnapshot> {
     let center = center_root()?;
-    fs::create_dir_all(&center)?;
     let home = home_root()?;
     let translations = load_translations().unwrap_or_default();
-    let mut skills = Vec::new();
-
-    for entry in sorted_entries(&center)? {
-        let path = entry.path();
-        let file_type = entry.file_type()?;
-        if (!file_type.is_dir() && !file_type.is_symlink()) || is_hidden(&entry.file_name()) {
-            continue;
-        }
-        let Some(id) = entry.file_name().to_str().map(str::to_owned) else {
-            continue;
-        };
-        if validate_id(&id).is_err() {
-            continue;
-        }
-        skills.push(inspect_skill(&center, &home, &id, &path, &translations));
-    }
-
-    skills.sort_by(|a, b| a.name_zh.cmp(&b.name_zh).then_with(|| a.id.cmp(&b.id)));
+    let skills = scan_skill_assets(&center, &home, &translations)?;
     let tools = inspect_tools(&home, &center, &skills);
     let connection_count = skills
         .iter()
@@ -219,7 +201,12 @@ pub fn scan() -> io::Result<CenterSnapshot> {
         connection_count,
         chinese_ready_count: skills
             .iter()
-            .filter(|skill| skill.translation_mode != "pending")
+            .filter(|skill| {
+                matches!(
+                    skill.translation_mode.as_str(),
+                    "native" | "curated" | "custom"
+                )
+            })
             .count(),
         screenshot_count: skills
             .iter()
@@ -234,6 +221,29 @@ pub fn scan() -> io::Result<CenterSnapshot> {
         tools,
         summary,
     })
+}
+
+fn scan_skill_assets(
+    center: &Path,
+    home: &Path,
+    translations: &TranslationStore,
+) -> io::Result<Vec<SkillAsset>> {
+    let mut skills = Vec::new();
+    // A read-only scan must fail for a missing/moved root, never create a new one.
+    for entry in sorted_entries(center)? {
+        let path = entry.path();
+        if is_hidden(&entry.file_name()) || !path.join(SKILL_FILE).is_file() {
+            continue;
+        }
+        let Some(id) = entry.file_name().to_str().map(str::to_owned) else {
+            continue;
+        };
+        if validate_id(&id).is_ok() {
+            skills.push(inspect_skill(center, home, &id, &path, translations));
+        }
+    }
+    skills.sort_by(|a, b| a.name_zh.cmp(&b.name_zh).then_with(|| a.id.cmp(&b.id)));
+    Ok(skills)
 }
 
 pub fn read_skill(skill_id: &str) -> io::Result<SkillContent> {
@@ -350,13 +360,51 @@ fn inspect_skill(
     let skill_file = path.join(SKILL_FILE);
     let markdown = fs::read_to_string(&skill_file).unwrap_or_default();
     let metadata = parse_frontmatter(&markdown);
+    let content_hash = sha256_text(&markdown);
+    let curated = crate::curated::for_source(id, &content_hash);
     let name_en = metadata
         .get("name")
         .cloned()
         .unwrap_or_else(|| id.replace('-', " "));
-    let summary_en = metadata.get("description").cloned().unwrap_or_default();
-    let category = infer_category(&format!("{id} {name_en} {summary_en}"));
-    let generated_name = chinese_name(id, &name_en, &category);
+    let summary_en = metadata
+        .get("description_en")
+        .or_else(|| {
+            metadata
+                .get("description")
+                .filter(|value| !contains_cjk(value))
+        })
+        .cloned()
+        .or_else(|| curated.map(|value| value.purpose_en.clone()))
+        .or_else(|| metadata.get("description").cloned())
+        .unwrap_or_default();
+    let category = metadata
+        .get("category")
+        .filter(|value| {
+            [
+                "image",
+                "design",
+                "development",
+                "content",
+                "presentation",
+                "video",
+                "data",
+                "security",
+                "automation",
+                "marketing",
+                "research",
+                "productivity",
+                "general",
+                "ai-assistant",
+                "browser-automation",
+                "data-visualization",
+                "database",
+                "devops",
+            ]
+            .contains(&value.as_str())
+        })
+        .cloned()
+        .or_else(|| curated.map(|value| value.category.clone()))
+        .unwrap_or_else(|| infer_category(&format!("{id} {name_en} {summary_en}")));
     let custom = translations.translations.get(id);
     let metadata_name_zh = metadata.get("name_zh").filter(|value| contains_cjk(value));
     let metadata_summary_zh = metadata
@@ -365,31 +413,64 @@ fn inspect_skill(
     let name_zh = custom
         .map(|value| value.name_zh.clone())
         .or_else(|| metadata_name_zh.cloned())
-        .unwrap_or(generated_name);
-    let purpose_zh = purpose_for_skill(id, &name_zh, &summary_en, &category);
-    let generated_summary = format!("{purpose_zh} 英文标识为 {id}，原始调用契约保持不变。");
+        .or_else(|| curated.map(|value| value.name_zh.clone()))
+        .or_else(|| contains_cjk(&name_en).then(|| name_en.clone()))
+        .unwrap_or_else(|| format!("中文名待核对 · {id}"));
+    let purpose_zh = custom
+        .map(|value| value.summary_zh.clone())
+        .or_else(|| {
+            metadata
+                .get("purpose_zh")
+                .filter(|value| contains_cjk(value))
+                .cloned()
+        })
+        .or_else(|| metadata_summary_zh.cloned())
+        .or_else(|| curated.map(|value| value.purpose_zh.clone()))
+        .or_else(|| {
+            metadata
+                .get("description")
+                .filter(|value| contains_cjk(value))
+                .cloned()
+        })
+        .unwrap_or_else(|| "中文用途待核对，请查看原始说明；不根据名称猜测能力。".to_owned());
     let summary_zh = custom
         .map(|value| value.summary_zh.clone())
         .or_else(|| metadata_summary_zh.cloned())
-        .unwrap_or(generated_summary);
-    let purpose_en = purpose_en_for_skill(id, &name_en, &category);
+        .unwrap_or_else(|| purpose_zh.clone());
+    let purpose_en = metadata
+        .get("purpose_en")
+        .or_else(|| metadata.get("description_en"))
+        .filter(|value| !contains_cjk(value))
+        .cloned()
+        .or_else(|| curated.map(|value| value.purpose_en.clone()))
+        .unwrap_or_else(|| summary_en.clone());
+    let native_purpose = ["purpose_zh", "description_zh", "description"]
+        .iter()
+        .any(|key| metadata.get(*key).is_some_and(|value| contains_cjk(value)));
     let translation_mode = if custom.is_some() {
         "custom"
-    } else if metadata_name_zh.is_some() || contains_cjk(&name_en) {
+    } else if (metadata_name_zh.is_some() || contains_cjk(&name_en)) && native_purpose {
         "native"
+    } else if curated.is_some() {
+        "curated"
     } else {
-        "generated"
+        "pending"
     };
     let (risk_level, risk_flags) = risk_assessment(&markdown);
     let file_count = count_files(path, 5).unwrap_or(0);
-    let (features_zh, features_en) = feature_labels(path, &markdown, &risk_flags);
+    let (fallback_zh, fallback_en) = feature_labels(path, &markdown, &risk_flags);
+    let features_zh = metadata_features(&metadata, "features_zh")
+        .or_else(|| curated.map(|value| value.features_zh.clone()))
+        .unwrap_or(fallback_zh);
+    let features_en = metadata_features(&metadata, "features_en")
+        .or_else(|| curated.map(|value| value.features_en.clone()))
+        .unwrap_or(fallback_en);
     let preview_count = find_preview_images(path).len();
     let preview_kind = if preview_count > 0 {
         "screenshot"
     } else {
         "generated"
     };
-    let content_hash = sha256_text(&markdown);
     let modified_at = fs::metadata(&skill_file)
         .and_then(|value| value.modified())
         .ok()
@@ -406,7 +487,7 @@ fn inspect_skill(
             }
         })
         .collect::<Vec<_>>();
-    let has_frontmatter = markdown.trim_start().starts_with("---");
+    let has_frontmatter = metadata.contains_key("name") && metadata.contains_key("description");
     let score = readiness_score(
         !markdown.is_empty(),
         has_frontmatter,
@@ -619,25 +700,89 @@ fn readiness_score(
 fn parse_frontmatter(markdown: &str) -> HashMap<String, String> {
     let mut values = HashMap::new();
     let mut lines = markdown.lines();
-    if lines.next().map(str::trim) != Some("---") {
+    if markdown.len() as u64 > MAX_SKILL_BYTES || lines.next().map(str::trim) != Some("---") {
         return values;
     }
+    let mut header = String::new();
+    let mut closed = false;
     for line in lines {
         if line.trim() == "---" {
+            closed = true;
             break;
         }
-        let Some((key, value)) = line.split_once(':') else {
-            continue;
+        header.push_str(line);
+        header.push('\n');
+    }
+    if !closed {
+        return values;
+    }
+    let Ok(parsed) = serde_yaml_ng::from_str::<serde_yaml_ng::Value>(&header) else {
+        return values;
+    };
+    // Only display fields at the root or directly under metadata are accepted.
+    // Provider-specific nested dictionaries cannot overwrite the Skill contract.
+    for key in [
+        "name",
+        "description",
+        "name_zh",
+        "description_zh",
+        "description_en",
+        "purpose_zh",
+        "purpose_en",
+        "features_zh",
+        "features_en",
+        "category",
+    ] {
+        let field = if key == "name" || key == "description" {
+            parsed.get(key)
+        } else {
+            parsed
+                .get("metadata")
+                .and_then(|meta| meta.get(key))
+                .or_else(|| parsed.get(key))
         };
-        let key = key.trim();
-        if ["name", "description", "name_zh", "description_zh"].contains(&key) {
-            values.insert(
-                key.to_owned(),
-                value.trim().trim_matches(['\'', '"']).to_owned(),
-            );
+        let value = field.and_then(|value| {
+            if key.starts_with("features_") {
+                if let Some(items) = value.as_sequence() {
+                    return Some(
+                        items
+                            .iter()
+                            .filter_map(|item| item.as_str())
+                            .collect::<Vec<_>>()
+                            .join("；"),
+                    );
+                }
+            }
+            value.as_str().map(str::to_owned)
+        });
+        if let Some(value) = value.filter(|value| !value.trim().is_empty()) {
+            values.insert(key.to_owned(), value.trim().to_owned());
         }
     }
     values
+}
+
+fn metadata_features(metadata: &HashMap<String, String>, key: &str) -> Option<Vec<String>> {
+    let mut seen = HashSet::new();
+    let labels = metadata
+        .get(key)?
+        .split([';', '；', '\n'])
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .filter(|value| seen.insert((*value).to_owned()))
+        .take(4)
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+    (!labels.is_empty()).then_some(labels)
+}
+
+fn matches_keyword(text: &str, keyword: &str) -> bool {
+    if keyword.len() <= 3 && keyword.is_ascii() {
+        text.split(|character: char| !character.is_ascii_alphanumeric())
+            .any(|word| word == keyword)
+    } else {
+        text.contains(keyword)
+    }
 }
 
 fn infer_category(text: &str) -> String {
@@ -648,13 +793,13 @@ fn infer_category(text: &str) -> String {
     }
     if ["ppt", "slide", "presentation", "courseware"]
         .iter()
-        .any(|term| identifier.contains(term))
+        .any(|term| matches_keyword(identifier, term))
     {
         return "presentation".to_owned();
     }
     if ["video", "remotion", "caption", "pixel2motion"]
         .iter()
-        .any(|term| identifier.contains(term))
+        .any(|term| matches_keyword(identifier, term))
     {
         return "video".to_owned();
     }
@@ -663,13 +808,13 @@ fn infer_category(text: &str) -> String {
     }
     if ["ppt", "slide", "presentation", "courseware"]
         .iter()
-        .any(|term| lower.contains(term))
+        .any(|term| matches_keyword(&lower, term))
     {
         return "presentation".to_owned();
     }
     if ["video", "remotion", "caption", "pixel2motion"]
         .iter()
-        .any(|term| lower.contains(term))
+        .any(|term| matches_keyword(&lower, term))
     {
         return "video".to_owned();
     }
@@ -708,7 +853,10 @@ fn infer_category(text: &str) -> String {
         ),
     ];
     for (category, keywords) in categories {
-        if keywords.iter().any(|keyword| lower.contains(keyword)) {
+        if keywords
+            .iter()
+            .any(|keyword| matches_keyword(&lower, keyword))
+        {
             return category.to_owned();
         }
     }
@@ -749,613 +897,6 @@ fn is_image_generation_capability(text: &str) -> bool {
     ]
     .iter()
     .any(|term| lower.contains(term))
-}
-
-fn chinese_name(id: &str, name_en: &str, category: &str) -> String {
-    match id {
-        "z-video-downloader" => return "视频·下载·归档".to_owned(),
-        "haiming-app-monetization" => return "移动应用·付费转化".to_owned(),
-        "last30days" => return "近三十天·趋势研究".to_owned(),
-        "easel-content-workbench" => return "社媒内容·工作台".to_owned(),
-        "omnivoice-tts" => return "多语种·语音合成".to_owned(),
-        "freepep-catalog-auditor" => return "人教教材·目录核验".to_owned(),
-        _ => {}
-    }
-    if contains_cjk(name_en) {
-        return name_en.to_owned();
-    }
-    let tokens = id
-        .split(|character: char| !character.is_ascii_alphanumeric())
-        .filter(|token| !token.is_empty())
-        .collect::<Vec<_>>();
-    let translated = tokens
-        .iter()
-        .map(|token| translate_token(token))
-        .filter(|token| !token.is_empty())
-        .collect::<Vec<_>>()
-        .join("·");
-    if contains_cjk(&translated) {
-        translated
-    } else {
-        format!("{}能力·{}", category_label(category), name_en)
-    }
-}
-
-fn translate_token(token: &str) -> String {
-    let lower = token.to_lowercase();
-    let translated = match lower.as_str() {
-        "ai" => "AI",
-        "agent" | "agents" => "智能体",
-        "api" => "接口",
-        "app" | "apps" => "应用",
-        "article" => "文章",
-        "audit" => "审计",
-        "automation" => "自动化",
-        "backend" => "后端",
-        "brand" => "品牌",
-        "browser" => "浏览器",
-        "build" | "builder" => "构建",
-        "business" => "商业",
-        "caption" | "captions" => "字幕",
-        "chart" | "charts" => "图表",
-        "clean" => "清理",
-        "cli" => "命令行",
-        "code" | "coding" => "代码",
-        "comic" => "漫画",
-        "competitive" | "competitor" => "竞品",
-        "content" => "内容",
-        "copy" | "copywriting" => "文案",
-        "create" | "creator" => "创作",
-        "customer" => "客户",
-        "data" => "数据",
-        "database" => "数据库",
-        "debug" | "debugging" => "调试",
-        "deploy" => "部署",
-        "design" => "设计",
-        "development" | "developer" => "开发",
-        "document" | "documents" => "文档",
-        "edit" | "editing" | "editorial" => "编辑",
-        "engineering" => "工程",
-        "explain" | "explainer" => "解释",
-        "figma" => "Figma",
-        "finance" => "财务",
-        "frontend" => "前端",
-        "general" => "通用",
-        "generate" | "generator" => "生成",
-        "git" | "github" => "Git",
-        "image" => "图像",
-        "install" | "installer" => "安装",
-        "keyword" => "关键词",
-        "knowledge" => "知识",
-        "logo" => "标志",
-        "management" => "管理",
-        "marketing" => "营销",
-        "media" => "媒体",
-        "minimal" | "minimalist" => "极简",
-        "motion" => "动效",
-        "music" => "音乐",
-        "pdf" => "PDF",
-        "performance" => "性能",
-        "plan" | "planning" => "规划",
-        "plugin" => "插件",
-        "ppt" | "presentation" | "presentations" | "slides" => "演示文稿",
-        "product" => "产品",
-        "project" => "项目",
-        "prompt" => "提示词",
-        "research" => "研究",
-        "review" => "评审",
-        "sales" => "销售",
-        "search" => "搜索",
-        "security" => "安全",
-        "seo" => "搜索优化",
-        "skill" | "skills" => "技能",
-        "social" => "社交内容",
-        "spreadsheet" | "spreadsheets" => "电子表格",
-        "style" => "风格",
-        "strategy" => "策略",
-        "sync" => "同步",
-        "test" | "testing" => "测试",
-        "tool" | "tools" => "工具",
-        "translate" | "translation" => "翻译",
-        "ui" => "界面",
-        "prompter" => "提示词",
-        "ux" => "体验",
-        "video" => "视频",
-        "visual" | "visualization" => "视觉",
-        "web" | "website" => "网页",
-        "workflow" => "工作流",
-        "writing" => "写作",
-        "3d" => "三维",
-        "action" => "行动",
-        "adrs" => "架构决策记录",
-        "analysis" => "分析",
-        "and" | "as" | "me" | "to" | "using" | "with" => "",
-        "animation" => "动画",
-        "anything" => "全内容",
-        "architecture" => "架构",
-        "art" => "艺术",
-        "audio" => "音频",
-        "austrian" => "奥地利学派",
-        "autumn" => "秋季",
-        "baocanmou" | "bcm" => "包参谋",
-        "baocut" => "包剪",
-        "bases" => "数据库视图",
-        "batch" => "批量",
-        "benchmark" => "基准测试",
-        "blue" => "蓝色",
-        "bluegreen" => "蓝绿发布",
-        "breakdown" => "拆解",
-        "bridge" => "桥接",
-        "brutalist" => "粗野主义",
-        "btpanel" => "宝塔面板",
-        "bw" => "黑白",
-        "campus" => "校园",
-        "canvas" => "画布",
-        "card" => "卡片",
-        "cd" => "持续交付",
-        "center" => "中心",
-        "character" => "角色",
-        "chalkboard" => "黑板风",
-        "chatroom" => "聊天室",
-        "check" => "检查",
-        "chinese" => "中文",
-        "ci" => "持续集成",
-        "circuit" => "电路",
-        "cleaner" => "清理器",
-        "clustering" => "聚类",
-        "coach" => "教练",
-        "color" => "配色",
-        "constraint" => "约束",
-        "context" => "上下文",
-        "core" => "核心",
-        "corporate" => "企业",
-        "courseware" => "课件",
-        "creative" => "创意",
-        "cyan" => "青色",
-        "dark" => "深色",
-        "dbs" => "DBS",
-        "decision" => "决策",
-        "deconstruct" => "解构",
-        "deed" => "善行",
-        "defense" => "答辩",
-        "defuddle" => "网页正文提取",
-        "deprecation" => "弃用",
-        "devtools" => "开发者工具",
-        "diagnosis" | "doctor" => "诊断",
-        "director" => "导演",
-        "diary" => "日记",
-        "doodle" => "涂鸦",
-        "doubt" => "质疑",
-        "driven" => "驱动",
-        "ecommerce" => "电商",
-        "education" => "教育",
-        "elegant" => "雅致",
-        "eli5" => "五岁能懂",
-        "elon" => "埃隆",
-        "embedded" => "内嵌",
-        "enablement" => "赋能资料",
-        "energy" => "活力",
-        "enterprise" => "企业",
-        "error" => "错误",
-        "esa" => "ESA",
-        "extract" => "提取",
-        "faceless" => "无真人出镜",
-        "feynman" => "费曼",
-        "files" => "文件",
-        "flow" => "流程",
-        "four" => "四格",
-        "frameworks" => "框架",
-        "fusion" => "融合",
-        "gimi" => "Gimi",
-        "girl" => "女孩",
-        "glass" => "玻璃质感",
-        "goal" => "目标",
-        "gold" => "金色",
-        "good" => "好问题",
-        "gpt" => "GPT",
-        "graphics" => "图形",
-        "green" => "绿色",
-        "gsap" => "GSAP",
-        "guizang" => "归藏",
-        "handdraw" | "handdrawn" => "手绘",
-        "hardening" => "加固",
-        "head" => "头像",
-        "hook" => "钩子",
-        "html" => "HTML",
-        "hyperframes" => "Hyperframes",
-        "idea" => "创意",
-        "identity" => "身份识别",
-        "imagegen" => "图像生成",
-        "impeccable" => "精修",
-        "implementation" => "实现",
-        "incremental" => "增量",
-        "industry" => "产业",
-        "infographic" => "信息图",
-        "illustration" | "illustrations" => "插画",
-        "instrumentation" => "监测埋点",
-        "interface" => "界面接口",
-        "interview" => "访谈",
-        "ip" => "知识产权",
-        "iridescent" => "虹彩",
-        "jobs" => "任务",
-        "json" => "JSON",
-        "keyframes" => "关键帧",
-        "landscape" => "格局",
-        "last30days" => "近三十天",
-        "launch" => "发布",
-        "lavender" => "薰衣草紫",
-        "learning" => "学习",
-        "link" => "链接",
-        "local" => "本地",
-        "markdown" => "Markdown",
-        "maker" => "制作",
-        "markitdown" => "文档转换",
-        "material" => "素材",
-        "migration" => "迁移",
-        "mint" => "薄荷绿",
-        "mobile" => "移动端",
-        "mono" => "单色",
-        "multicolor" => "多彩",
-        "musk" => "马斯克",
-        "native" => "原生",
-        "neon" => "霓虹",
-        "new" => "新式",
-        "notebooklm" => "NotebookLM",
-        "notion" => "Notion",
-        "observability" => "可观测性",
-        "obsidian" => "Obsidian",
-        "offers" => "报价方案",
-        "office" => "办公",
-        "opener" => "开场",
-        "ops" => "运营运维",
-        "optimization" | "optimizer" => "优化",
-        "orange" => "橙色",
-        "output" => "完整输出",
-        "panda" => "熊猫",
-        "panel" => "分镜",
-        "paper" => "纸张",
-        "perspective" => "视角",
-        "platform" => "平台",
-        "plugins" => "插件",
-        "pr" => "合并请求",
-        "precheck" => "预检",
-        "pricing" => "定价",
-        "profiling" => "画像分析",
-        "progress" => "进度",
-        "prospecting" => "潜客开发",
-        "publish" | "publisher" => "发布",
-        "pure" => "纯白",
-        "qc" | "quality" => "质量检查",
-        "qiaomu" => "乔木",
-        "question" => "提问",
-        "reach" => "触达",
-        "react" => "React",
-        "real" => "真实场景",
-        "recovery" => "恢复",
-        "recut" => "再剪辑",
-        "red" => "红色",
-        "redesign" => "重新设计",
-        "refine" => "优化完善",
-        "registry" => "注册表",
-        "release" => "发布",
-        "remotion" => "Remotion",
-        "renhua" => "人话表达",
-        "replica" => "复刻",
-        "report" => "报告",
-        "recurring" => "连续",
-        "resonate" => "共鸣",
-        "restore" => "恢复",
-        "resume" => "简历",
-        "rn" => "RN",
-        "rural" => "乡村",
-        "saas" => "SaaS",
-        "safe" => "安全",
-        "save" => "保存",
-        "schema" => "模式",
-        "script" => "脚本",
-        "scrolltrigger" => "滚动触发",
-        "setup" => "配置",
-        "shipping" => "交付上线",
-        "simplification" => "简化",
-        "site" => "网站",
-        "sketch" => "草图",
-        "slideshow" => "幻灯片",
-        "slowisfast" => "慢即是快",
-        "soft" => "高级视觉",
-        "source" => "来源",
-        "spec" => "规格",
-        "spread" => "传播",
-        "src" => "源码",
-        "steve" => "史蒂夫",
-        "stitch" => "拼接",
-        "story" => "故事",
-        "system" => "系统",
-        "semantic" => "语义",
-        "talking" => "口播",
-        "task" => "任务",
-        "taste" | "tasteskill" => "审美",
-        "teal" => "青绿色",
-        "tech" => "科技",
-        "text" => "文字",
-        "timeline" => "时间线",
-        "title" => "标题",
-        "training" => "培训",
-        "transparent" => "透明",
-        "trust" => "可信发布",
-        "update" => "更新",
-        "use" => "使用",
-        "utils" => "工具集",
-        "versioning" => "版本管理",
-        "visuals" => "视觉素材",
-        "warm" => "暖色",
-        "watch" => "监测",
-        "watercolor" => "水彩",
-        "wechat" => "微信",
-        "white" => "白色",
-        "whiteboard" => "白板",
-        "wordpress" => "WordPress",
-        "xhs" => "小红书",
-        "yellow" => "黄色",
-        "yuwen" => "语文",
-        _ => token,
-    };
-    translated.to_owned()
-}
-
-fn purpose_for_skill(id: &str, name_zh: &str, summary_en: &str, category: &str) -> String {
-    if id == "haiming-app-monetization" {
-        return "评估移动 App 的引导、付费墙、会员权益、套餐定价及购买恢复路径，并形成可验证的商业化方案。"
-            .to_owned();
-    }
-    if id == "last30days" {
-        return "研究最近 30 天的公开讨论与互动信号，区分各来源可用性并输出可追溯的趋势结论。"
-            .to_owned();
-    }
-    if id == "easel-content-workbench" {
-        return "连接本机 Easel，完成社媒选题、画像、内容制作与效果归因；真实发布需单独授权。"
-            .to_owned();
-    }
-    if id == "omnivoice-tts" {
-        return "连接本机 OmniVoice，完成多语种文字转语音、授权声音克隆与中英文声音风格设计。"
-            .to_owned();
-    }
-    if id == "freepep-catalog-auditor" {
-        return "查询和核验人教教材的学制、年级、学科、册次及官方阅读入口，不批量抓取教材正文。"
-            .to_owned();
-    }
-    if id == "handdraw-style-prompter" {
-        return "按 001–261 编号选择手绘风格，生成中英文提示词，并按模型能力决定是否引用风格图。"
-            .to_owned();
-    }
-    if id == "gpt-image-2-5-ecommerce" {
-        return "根据商品图和平台要求，制作电商主图、详情图、试穿图、换背景及多语言素材提示词。"
-            .to_owned();
-    }
-    if id == "z-video-downloader" {
-        return "下载有权保存的视频、字幕和封面，支持批量、断点续传、历史去重与中文报告。"
-            .to_owned();
-    }
-    if category == "image" {
-        return "生成或优化插画、配图、标志等视觉素材。".to_owned();
-    }
-    let key = format!("{id} {summary_en}").to_lowercase();
-    let rules = [
-        (
-            ["find-skills", "skill-installer", "skill-center"].as_slice(),
-            "发现、筛选和管理可供 AI 使用的技能能力",
-        ),
-        (
-            ["anything-to-notebooklm", "notebooklm"].as_slice(),
-            "把网页、文档、音视频等资料整理后导入 NotebookLM",
-        ),
-        (
-            ["ppt", "presentation", "slides", "courseware", "infographic"].as_slice(),
-            "规划演示结构、设计版式并生成可编辑的 PPT 成品",
-        ),
-        (
-            [
-                "video", "remotion", "motion", "caption", "recut", "faceless",
-            ]
-            .as_slice(),
-            "完成视频策划、剪辑、字幕、动效或成片输出",
-        ),
-        (
-            ["mono-color"].as_slice(),
-            "用单一主色建立克制、统一、具有品牌感的视觉方案",
-        ),
-        (
-            [
-                "imagegen",
-                "image-gen",
-                "illustration",
-                "comic",
-                "logo",
-                "visuals",
-            ]
-            .as_slice(),
-            "生成或优化插画、配图、标志等视觉素材",
-        ),
-        (
-            ["taste", "impeccable", "design", "ui", "ux", "figma"].as_slice(),
-            "改善界面、配色、版式和视觉层级，减少 AI 模板感",
-        ),
-        (
-            ["browser", "playwright", "devtools", "website-to"].as_slice(),
-            "让 AI 操作或测试网页，读取页面状态并验证交互结果",
-        ),
-        (
-            [
-                "spreadsheet",
-                "chart",
-                "analytics",
-                "data-quality",
-                "dashboard",
-                "kpi",
-            ]
-            .as_slice(),
-            "整理和分析数据，生成图表、看板与可复核结论",
-        ),
-        (
-            ["pdf", "document", "markitdown", "markdown"].as_slice(),
-            "读取、转换、编辑或交付 PDF 与常见文档",
-        ),
-        (
-            [
-                "security",
-                "threat",
-                "vulnerability",
-                "attack-path",
-                "hardening",
-            ]
-            .as_slice(),
-            "发现安全风险、分析攻击路径并验证修复结果",
-        ),
-        (
-            [
-                "wordpress",
-                "publisher",
-                "publish",
-                "shipping",
-                "deploy",
-                "release",
-            ]
-            .as_slice(),
-            "执行网站或项目发布，并回读线上状态完成验收",
-        ),
-        (
-            ["git", "github", "versioning", "ci-cd", "gh-"].as_slice(),
-            "管理 Git 版本、代码协作、持续集成与发布流程",
-        ),
-        (
-            ["seo", "geo", "keyword", "link-prospecting"].as_slice(),
-            "研究关键词并优化内容，使搜索引擎和 AI 更容易理解与推荐",
-        ),
-        (
-            ["wechat", "xhs", "copy", "article", "editorial", "content"].as_slice(),
-            "策划、撰写和优化内容，形成适合目标平台的可发布稿件",
-        ),
-        (
-            [
-                "competitor",
-                "competitive",
-                "customer-research",
-                "market-sizing",
-                "interview",
-            ]
-            .as_slice(),
-            "开展客户、市场或竞品研究，并整理为可行动的判断",
-        ),
-        (
-            [
-                "marketing",
-                "sales",
-                "pricing",
-                "offers",
-                "product-marketing",
-            ]
-            .as_slice(),
-            "制定营销、销售、定价或产品传播方案",
-        ),
-        (
-            ["obsidian"].as_slice(),
-            "整理 Obsidian 知识库内容、视图和交付归档",
-        ),
-        (
-            ["eli5", "feynman", "explainer"].as_slice(),
-            "把复杂知识改写成更直白、易懂、便于学习的解释",
-        ),
-        (
-            [
-                "code",
-                "debug",
-                "testing",
-                "api",
-                "frontend",
-                "backend",
-                "architecture",
-            ]
-            .as_slice(),
-            "辅助编写、检查和改进代码，控制工程质量与交付范围",
-        ),
-        (
-            ["automation", "workflow", "agent", "cli"].as_slice(),
-            "把重复任务整理为 AI 可执行、可复用、可检查的流程",
-        ),
-        (
-            ["audio", "music"].as_slice(),
-            "处理音频、音乐或配音素材并服务于内容交付",
-        ),
-        (
-            ["dbs-"].as_slice(),
-            "按 DBS 方法完成对应思考任务，并输出结构化结论",
-        ),
-    ];
-    for (patterns, purpose) in rules {
-        if patterns.iter().any(|pattern| key.contains(pattern)) {
-            return format!("{purpose}。");
-        }
-    }
-    let fallback = match category {
-        "image" => "生成或优化插画、配图、标志等视觉素材",
-        "design" => "把视觉需求转成可检查、可交付的设计结果",
-        "development" => "辅助代码开发、工程判断与交付质量控制",
-        "content" => "辅助内容策划、表达优化与传播交付",
-        "presentation" => "辅助演示文稿的结构、版式与成品输出",
-        "video" => "辅助视频策划、剪辑、动效与成片表达",
-        "data" => "辅助数据整理、分析、图表与结论表达",
-        "security" => "辅助发现安全风险并验证处理结果",
-        "automation" => "把重复操作整理为可复用的自动化流程",
-        _ => "为对应任务提供结构化步骤与质量检查",
-    };
-    format!("{name_zh}用于{fallback}。")
-}
-
-fn purpose_en_for_skill(id: &str, name_en: &str, category: &str) -> String {
-    match id {
-        "haiming-app-monetization" => "Review a mobile app's onboarding, paywall, benefits, pricing, purchase, and restore flow, then produce a testable monetization plan.".to_owned(),
-        "last30days" => "Research public discussion and engagement signals from the last 30 days, reporting source availability and traceable findings.".to_owned(),
-        "easel-content-workbench" => "Use the local Easel workbench for social-content planning, production, and attribution; real publishing requires separate approval.".to_owned(),
-        "omnivoice-tts" => "Use the local OmniVoice tool for multilingual TTS, consented voice cloning, and Chinese or English voice design.".to_owned(),
-        "freepep-catalog-auditor" => "Audit PEP textbook grade, subject, semester, and official reading entries without bulk scraping textbook content.".to_owned(),
-        _ => purpose_for_category(category, name_en, "en"),
-    }
-}
-
-fn purpose_for_category(category: &str, name: &str, locale: &str) -> String {
-    let purpose = if locale == "zh" {
-        match category {
-            "image" => "生成或优化插画、配图、标志等视觉素材",
-            "design" => "把视觉需求转成可检查、可交付的设计结果",
-            "development" => "辅助代码开发、工程判断与交付质量控制",
-            "content" => "辅助内容策划、表达优化与传播交付",
-            "presentation" => "辅助演示文稿的结构、版式与成品输出",
-            "video" => "辅助视频策划、剪辑、动效与成片表达",
-            "data" => "辅助数据整理、分析、图表与结论表达",
-            "security" => "辅助发现安全风险并验证处理结果",
-            "automation" => "把重复操作整理为可复用的自动化流程",
-            _ => "为对应任务提供结构化步骤与质量检查",
-        }
-    } else {
-        match category {
-            "image" => "generate or refine illustrations, supporting images, logos, and other visual assets",
-            "design" => "turn visual requirements into reviewable design deliverables",
-            "development" => {
-                "support software development, engineering judgment, and delivery quality"
-            }
-            "content" => "support content planning, editing, and distribution-ready delivery",
-            "presentation" => "support presentation structure, layout, and editable output",
-            "video" => "support video planning, editing, motion, and final delivery",
-            "data" => "support data preparation, analysis, charts, and conclusions",
-            "security" => "identify security risks and verify remediation",
-            "automation" => "turn repeated operations into reusable automated workflows",
-            _ => "provide structured execution and quality checks for the task",
-        }
-    };
-    if locale == "zh" {
-        format!("{name}：{purpose}。")
-    } else {
-        format!("{name}: designed to {purpose}.")
-    }
 }
 
 fn feature_labels(
@@ -1611,21 +1152,6 @@ fn preview_label(root: &Path, image: &Path) -> String {
     }
 }
 
-fn category_label(category: &str) -> &'static str {
-    match category {
-        "image" => "图像生成",
-        "design" => "设计",
-        "development" => "开发",
-        "content" => "内容",
-        "presentation" => "演示",
-        "video" => "视频",
-        "data" => "数据",
-        "security" => "安全",
-        "automation" => "自动化",
-        _ => "通用",
-    }
-}
-
 fn contains_cjk(value: &str) -> bool {
     value
         .chars()
@@ -1775,101 +1301,134 @@ mod tests {
     }
 
     #[test]
-    fn chinese_name_translates_known_tokens() {
+    fn frontmatter_reads_folded_text_and_direct_metadata_only() {
+        let parsed = parse_frontmatter("---\nname: demo\ndescription: >-\n  Make useful\n  images.\nmetadata:\n  name_zh: 中文名\n  features_zh: [横版图片, 中文标注]\n  description_en: \"Read: \\\"quoted\\\" text\"\n  openclaw:\n    name: do-not-override\n    name_zh: 不得覆盖\n---\n# Body\nname: also-ignore");
+        assert_eq!(parsed.get("description").unwrap(), "Make useful images.");
+        assert_eq!(parsed.get("name").unwrap(), "demo");
+        assert_eq!(parsed.get("name_zh").unwrap(), "中文名");
+        assert_eq!(parsed.get("features_zh").unwrap(), "横版图片；中文标注");
         assert_eq!(
-            chinese_name("code-review", "code-review", "development"),
-            "代码·评审"
+            parsed.get("description_en").unwrap(),
+            "Read: \"quoted\" text"
         );
-        assert_eq!(
-            chinese_name("video-maker", "video-maker", "video"),
-            "视频·制作"
-        );
-        assert_eq!(
-            chinese_name(
-                "handdraw-style-prompter",
-                "handdraw-style-prompter",
-                "image"
-            ),
-            "手绘·风格·提示词"
-        );
-        assert_eq!(
-            chinese_name("z-video-downloader", "z-video-downloader", "video"),
-            "视频·下载·归档"
-        );
-        assert_eq!(
-            chinese_name(
-                "haiming-app-monetization",
-                "haiming-app-monetization",
-                "content"
-            ),
-            "移动应用·付费转化"
-        );
-        assert_eq!(
-            chinese_name("last30days", "last30days", "content"),
-            "近三十天·趋势研究"
-        );
-        assert_eq!(
-            chinese_name(
-                "easel-content-workbench",
-                "easel-content-workbench",
-                "content"
-            ),
-            "社媒内容·工作台"
-        );
-        assert_eq!(
-            chinese_name("omnivoice-tts", "omnivoice-tts", "general"),
-            "多语种·语音合成"
-        );
-        assert_eq!(
-            chinese_name(
-                "freepep-catalog-auditor",
-                "freepep-catalog-auditor",
-                "security"
-            ),
-            "人教教材·目录核验"
-        );
+        assert!(parse_frontmatter("---\nname: [broken\n---").is_empty());
+        assert!(parse_frontmatter("---\nname: demo").is_empty());
     }
 
     #[test]
-    fn chinese_purpose_explains_the_actual_job() {
-        assert_eq!(
-            purpose_for_skill(
-                "agent-browser",
-                "智能体·浏览器",
-                "browser automation",
-                "automation"
-            ),
-            "让 AI 操作或测试网页，读取页面状态并验证交互结果。"
+    fn asset_uses_curated_purpose_features_and_category() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("example-ppt");
+        fs::create_dir(&path).unwrap();
+        fs::write(path.join(SKILL_FILE), "---\nname: example-ppt\ndescription: 生成横版图片\nmetadata:\n  name_zh: 中文信息图\n  purpose_zh: 生成图片，不是可编辑PPT。\n  description_en: Generate images, not editable slides.\n  category: image\n  features_zh: 横版图片；中文标注；横版图片\n  features_en: Wide images;Chinese labels\n---\n# Example").unwrap();
+        let mut translations = TranslationStore::default();
+        let skill = inspect_skill(
+            root.path(),
+            root.path(),
+            "example-ppt",
+            &path,
+            &translations,
         );
-        assert_eq!(
-            purpose_for_skill(
-                "qiaomu-anything-to-notebooklm",
-                "乔木·全内容·NotebookLM",
-                "",
-                "presentation"
-            ),
-            "把网页、文档、音视频等资料整理后导入 NotebookLM。"
+        assert_eq!(skill.category, "image");
+        assert_eq!(skill.name_zh, "中文信息图");
+        assert_eq!(skill.purpose_zh, "生成图片，不是可编辑PPT。");
+        assert_eq!(skill.features_zh, vec!["横版图片", "中文标注"]);
+        assert_eq!(skill.features_en, vec!["Wide images", "Chinese labels"]);
+        assert_eq!(skill.summary_en, "Generate images, not editable slides.");
+        assert_eq!(skill.purpose_en, skill.summary_en);
+
+        translations.translations.insert(
+            "example-ppt".into(),
+            TranslationRecord {
+                name_zh: "用户命名".into(),
+                summary_zh: "用户自定义用途".into(),
+            },
         );
-        assert_eq!(
-            purpose_for_skill("gpt-image-2-5-ecommerce", "GPT·图像·2·5·电商", "", "image"),
-            "根据商品图和平台要求，制作电商主图、详情图、试穿图、换背景及多语言素材提示词。"
+        let custom = inspect_skill(
+            root.path(),
+            root.path(),
+            "example-ppt",
+            &path,
+            &translations,
         );
-        assert_eq!(
-            purpose_for_skill("z-video-downloader", "视频·下载·归档", "", "video"),
-            "下载有权保存的视频、字幕和封面，支持批量、断点续传、历史去重与中文报告。"
+        assert_eq!(custom.name_zh, "用户命名");
+        assert_eq!(custom.summary_zh, "用户自定义用途");
+        assert_eq!(custom.purpose_zh, "用户自定义用途");
+    }
+
+    #[test]
+    fn scan_ignores_source_containers_and_does_not_create_missing_roots() {
+        let root = tempfile::tempdir().unwrap();
+        let center = root.path().join("skills");
+        let translations = TranslationStore::default();
+        assert!(scan_skill_assets(&center, root.path(), &translations).is_err());
+        assert!(!center.exists());
+        fs::create_dir_all(center.join("source-container")).unwrap();
+        fs::create_dir_all(center.join("demo")).unwrap();
+        fs::write(
+            center.join("demo/SKILL.md"),
+            "---\nname: demo\ndescription: Test\n---",
+        )
+        .unwrap();
+        let skills = scan_skill_assets(&center, root.path(), &translations).unwrap();
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].id, "demo");
+    }
+
+    #[test]
+    #[ignore = "read-only integration check; requires an explicitly selected local skills root"]
+    fn live_catalog_metadata_roundtrip() {
+        let center =
+            PathBuf::from(std::env::var_os("BAOCANMOU_SKILLS_HOME").expect("explicit root"));
+        let expected: usize = std::env::var("BAOCANMOU_EXPECTED_SKILL_COUNT")
+            .expect("expected count")
+            .parse()
+            .unwrap();
+        let home = tempfile::tempdir().unwrap();
+        let skills = scan_skill_assets(&center, home.path(), &TranslationStore::default()).unwrap();
+        assert_eq!(skills.len(), expected);
+        for skill in &skills {
+            assert!(
+                matches!(skill.translation_mode.as_str(), "native" | "curated"),
+                "{}",
+                skill.id
+            );
+            assert!(contains_cjk(&skill.name_zh), "{}", skill.id);
+            assert!(contains_cjk(&skill.purpose_zh), "{}", skill.id);
+            assert!(!contains_cjk(&skill.purpose_en), "{}", skill.id);
+            assert!(skill.features_zh.len() >= 3, "{}", skill.id);
+            assert!(!skill.summary_en.is_empty(), "{}", skill.id);
+        }
+        for id in [
+            "last30days",
+            "guizang-ppt-skill",
+            "autumn-campus-defense-ppt",
+            "image-to-code-skill",
+            "baocut",
+            "qianwen-payment",
+            "qianwen-vision",
+            "typesafe-ai",
+        ] {
+            // Representative output is optional: a user may have retired a Skill.
+            // The assertions above still cover every currently installed asset.
+            let Some(skill) = skills.iter().find(|skill| skill.id == id) else {
+                continue;
+            };
+            println!(
+                "{} | {} | {} | {}",
+                skill.id,
+                skill.category,
+                skill.purpose_zh,
+                skill.features_zh.join("；")
+            );
+        }
+        println!(
+            "Verified {} actual Skill cards through the desktop parser",
+            skills.len()
         );
-        assert_eq!(
-            purpose_for_skill("haiming-app-monetization", "移动应用·付费转化", "", "content"),
-            "评估移动 App 的引导、付费墙、会员权益、套餐定价及购买恢复路径，并形成可验证的商业化方案。"
-        );
-        assert_eq!(
-            purpose_for_skill("last30days", "近三十天·趋势研究", "", "content"),
-            "研究最近 30 天的公开讨论与互动信号，区分各来源可用性并输出可追溯的趋势结论。"
-        );
-        assert_eq!(
-            purpose_en_for_skill("omnivoice-tts", "omnivoice-tts", "general"),
-            "Use the local OmniVoice tool for multilingual TTS, consented voice cloning, and Chinese or English voice design."
-        );
+        if let Some(output) = std::env::var_os("BAOCANMOU_TEST_CATALOG_OUTPUT") {
+            fs::write(output, serde_json::to_vec_pretty(&skills).unwrap()).unwrap();
+        }
     }
 
     #[test]
@@ -1891,6 +1450,43 @@ mod tests {
             "presentation"
         );
         assert_eq!(infer_category("animated image video"), "video");
+    }
+
+    #[test]
+    fn short_keywords_must_be_complete_words() {
+        assert_eq!(
+            infer_category("payment balance and recharge page guidance"),
+            "general"
+        );
+        assert_eq!(infer_category("ui layout"), "design");
+        assert!(!matches_keyword("building guidance", "ui"));
+        assert!(!matches_keyword("specialization", "ci"));
+        assert!(matches_keyword("ui-ux workflow", "ui"));
+    }
+
+    #[test]
+    fn unknown_or_changed_sources_are_pending_not_guessed() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("skill");
+        fs::create_dir(&path).unwrap();
+        let source =
+            "---\nname: qianwen-payment\ndescription: Changed balance and recharge guidance\n---\n";
+        fs::write(path.join(SKILL_FILE), source).unwrap();
+        for id in ["qianwen-payment", "unreviewed-skill"] {
+            let skill = inspect_skill(
+                root.path(),
+                root.path(),
+                id,
+                &path,
+                &TranslationStore::default(),
+            );
+            assert_eq!(skill.translation_mode, "pending");
+            assert!(skill.name_zh.contains("待核对"));
+            assert!(skill.purpose_zh.contains("待核对"));
+            assert!(!skill.purpose_zh.contains("界面"));
+            assert_eq!(skill.purpose_en, "Changed balance and recharge guidance");
+        }
+        assert_eq!(fs::read_to_string(path.join(SKILL_FILE)).unwrap(), source);
     }
 
     #[test]

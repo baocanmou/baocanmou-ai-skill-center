@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.0] - 2026-09-30
+
+- Replaced the metric-led home page with nine task-based entry points and six common-work shortcuts.
+- Added preparation guidance, scope notes, and bilingual copyable request templates to every skill.
+- Increased text sizes, simplified cards, and moved source text and connection details into expandable sections.
+- Kept slide-image styles separate from editable presentation workflows; searches still include all groups.
+- Reviewed the Chinese display layer: refreshed 13 source-bound descriptions and added the Baidu keyword skill. Both the initial 234-skill catalog and the current 113-skill catalog pass bilingual name, purpose, and feature validation. The reduction was a separately authorized cleanup, not part of this interface upgrade.
+- Preserved skill sources, existing links, and Claude settings. Static checks and filesystem links are not claims of successful skill execution.
+
 ## [1.2.0] - 2026-09-11
 
 ### Added

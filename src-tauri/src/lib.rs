@@ -1,4 +1,5 @@
 pub mod center;
+mod curated;
 
 use center::{CenterSnapshot, SkillContent, TranslationInput};
 
