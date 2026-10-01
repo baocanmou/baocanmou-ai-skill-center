@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="470" viewBox="0 0 1200 470" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, sans-serif" role="img" aria-label="BaoCanMou AI Skill Center · Workflow">
+<title>BaoCanMou AI Skill Center · Workflow</title>
+<defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#686860"/></marker></defs>
+<rect width="1200" height="470" rx="24" fill="#faf8f3"/>
+<text x="40" y="58" font-size="26" font-weight="700" fill="#111111">BaoCanMou AI Skill Center · Workflow</text>
+<text x="40" y="90" font-size="15" fill="#686860">The Fangce Five-Loop core: Discover → Interpret → Assess → Route → Verify. Step 4 is what you do in the app.</text>
+<rect x="29" y="130" width="172" height="230" rx="14" fill="#ffffff" stroke="#e4e0d5" stroke-width="1.5"/>
+<text x="45" y="162" font-size="13" font-weight="600" fill="#686860">01 · Discover</text>
+<text x="45" y="194" font-size="19" font-weight="700" fill="#111111">Scan</text>
+<text x="45" y="230" font-size="14" fill="#111111">Reads the center</text>
+<text x="45" y="253" font-size="14" fill="#111111">~/.agents/skills</text>
+<text x="45" y="276" font-size="14" fill="#111111">and AI-tool skill</text>
+<text x="45" y="299" font-size="14" fill="#111111">folders; no upload</text>
+<line x1="204" y1="245.0" x2="220" y2="245.0" stroke="#686860" stroke-width="1.6" marker-end="url(#ar)"/>
+<rect x="223" y="130" width="172" height="230" rx="14" fill="#ffffff" stroke="#e4e0d5" stroke-width="1.5"/>
+<text x="239" y="162" font-size="13" font-weight="600" fill="#686860">02 · Interpret</text>
+<text x="239" y="194" font-size="19" font-weight="700" fill="#111111">Understand</text>
+<text x="239" y="230" font-size="14" fill="#111111">Chinese name,</text>
+<text x="239" y="253" font-size="14" fill="#111111">primary use and</text>
+<text x="239" y="276" font-size="14" fill="#111111">features; English</text>
+<text x="239" y="299" font-size="14" fill="#111111">ID preserved</text>
+<line x1="398" y1="245.0" x2="414" y2="245.0" stroke="#686860" stroke-width="1.6" marker-end="url(#ar)"/>
+<rect x="417" y="130" width="172" height="230" rx="14" fill="#ffffff" stroke="#e4e0d5" stroke-width="1.5"/>
+<text x="433" y="162" font-size="13" font-weight="600" fill="#686860">03 · Assess</text>
+<text x="433" y="194" font-size="19" font-weight="700" fill="#111111">Fangce score</text>
+<text x="433" y="230" font-size="14" fill="#111111">Scores structure,</text>
+<text x="433" y="253" font-size="14" fill="#111111">understanding,</text>
+<text x="433" y="276" font-size="14" fill="#111111">portability, safety,</text>
+<text x="433" y="299" font-size="14" fill="#111111">verifiability</text>
+<line x1="592" y1="245.0" x2="608" y2="245.0" stroke="#686860" stroke-width="1.6" marker-end="url(#ar)"/>
+<rect x="611" y="130" width="172" height="230" rx="14" fill="#ffd900" stroke="#111111" stroke-width="1.5"/>
+<text x="627" y="162" font-size="13" font-weight="600" fill="#111111">04 · Find</text>
+<text x="627" y="194" font-size="19" font-weight="700" fill="#111111">Usage example</text>
+<text x="627" y="230" font-size="14" fill="#111111">Pick one of 9</text>
+<text x="627" y="253" font-size="14" fill="#111111">tasks or search;</text>
+<text x="627" y="276" font-size="14" fill="#111111">gather the inputs;</text>
+<text x="627" y="299" font-size="14" fill="#111111">copy the example</text>
+<line x1="786" y1="245.0" x2="802" y2="245.0" stroke="#686860" stroke-width="1.6" marker-end="url(#ar)"/>
+<rect x="805" y="130" width="172" height="230" rx="14" fill="#ffffff" stroke="#e4e0d5" stroke-width="1.5"/>
+<text x="821" y="162" font-size="13" font-weight="600" fill="#686860">05 · Route</text>
+<text x="821" y="194" font-size="19" font-weight="700" fill="#111111">Connect tools</text>
+<text x="821" y="230" font-size="14" fill="#111111">Links to Codex,</text>
+<text x="821" y="253" font-size="14" fill="#111111">Claude Code, etc.;</text>
+<text x="821" y="276" font-size="14" fill="#111111">marked copy if a</text>
+<text x="821" y="299" font-size="14" fill="#111111">Windows link fails</text>
+<line x1="980" y1="245.0" x2="996" y2="245.0" stroke="#686860" stroke-width="1.6" marker-end="url(#ar)"/>
+<rect x="999" y="130" width="172" height="230" rx="14" fill="#ffffff" stroke="#e4e0d5" stroke-width="1.5"/>
+<text x="1015" y="162" font-size="13" font-weight="600" fill="#686860">06 · Verify</text>
+<text x="1015" y="194" font-size="19" font-weight="700" fill="#111111">Scan again</text>
+<text x="1015" y="230" font-size="14" fill="#111111">Re-reads real</text>
+<text x="1015" y="253" font-size="14" fill="#111111">paths after each</text>
+<text x="1015" y="276" font-size="14" fill="#111111">change instead of</text>
+<text x="1015" y="299" font-size="14" fill="#111111">the button state</text>
+<rect x="29" y="388" width="1142" height="52" rx="12" fill="#111111"/>
+<text x="600.0" y="420" font-size="16" fill="#faf8f3" text-anchor="middle">Send the example and materials to Codex or Claude to run the skill. The center finds, explains and links; it does not execute skills.</text>
+</svg>
