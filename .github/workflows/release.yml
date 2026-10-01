@@ -46,6 +46,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
+          assetNamePattern: BaoCanMou-AI-Skill-Center_[version]_[platform]_[arch][setup][ext]
           releaseName: 包参谋 AI 技能中心 ${{ github.ref_name }}
           releaseBody: |
             包参谋原创方策五环核心，中英文双语版本。
