@@ -27,6 +27,13 @@ TOOL_PATHS = {
     "Cursor": ".cursor/skills",
     "ZCode": ".zcode/skills",
     "OpenCode": ".config/opencode/skills",
+    "Windsurf": ".windsurf/skills",
+    # Kimi Code CLI 本身读取 ~/.agents/skills；这里只用于发现它自有目录里的同名重复入口。
+    "Kimi Code CLI": ".kimi-code/skills",
+    "文心快码 Comate": ".comate/skills",
+    "Qwen Code": ".qwen/skills",
+    "TRAE": ".trae/skills",
+    "TRAE CN": ".trae-cn/skills",
 }
 FRONTMATTER = re.compile(r"\A---\s*\n(?P<body>.*?)\n---(?:\s*\n|\Z)", re.DOTALL)
 FIELD = re.compile(r"^(?P<key>[A-Za-z0-9_-]+):\s*(?P<value>.*)$")
@@ -425,7 +432,8 @@ def markdown_report(report: dict[str, object]) -> str:
     lines.extend([
         "", "## 多端副本与入口差异", "",
         "以下只比较本机技能目录；缺少同名入口不等于能力不可用，也不构成删除依据。",
-        "Codex 等宿主可能直接发现共享源；插件、项目与桌面账号还可能提供其他入口。", "",
+        "Codex 等宿主可能直接发现共享源；插件、项目与桌面账号还可能提供其他入口。",
+        "Kimi Code CLI 直接读取共享源，“缺少共享同名入口”对它不是缺口；它自有目录中的同名入口反而会重复加载，需人工核对。", "",
         "| 工具 | 根级技能 | 本地目录 | 同名本地副本 | 入口内容不同 | 缺少共享同名入口 |",
         "|---|---:|---:|---:|---:|---:|",
     ])

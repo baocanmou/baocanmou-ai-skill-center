@@ -23,6 +23,9 @@ describe('Skill catalog labels', () => {
     expect(getCopy('en').brokenLink).toContain('Broken link')
     expect(getCopy('en').previewShortfall).toContain('not a skill failure')
     expect(getCopy('zh').toolsDesc).toContain('Codex 可直接发现共享库')
+    expect(getCopy('zh').toolsDesc).toContain('Kimi Code CLI 直接读取中心源')
+    expect(getCopy('zh').noLinkNeeded).toBe('无需连接')
+    expect(getCopy('en').readsCenter).toContain('directly')
   })
 
   it('distinguishes reviewed, upstream and unreviewed Chinese explanations', () => {

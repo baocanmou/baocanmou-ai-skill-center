@@ -224,6 +224,22 @@ class SkillCenterAuditTests(unittest.TestCase):
             self.assertEqual(report["summary"]["broken_symlink_count"], 1)
             self.assertFalse(report["summary"]["healthy"])
 
+    def test_lists_domestic_hosts_read_only(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            central = home / ".agents/skills"
+            central.mkdir(parents=True)
+
+            report = AUDIT.build_report(central, home)
+
+            paths = {item["name"]: item["path"] for item in report["tools"]}
+            self.assertEqual(paths["Kimi Code CLI"], str(home / ".kimi-code/skills"))
+            self.assertEqual(paths["文心快码 Comate"], str(home / ".comate/skills"))
+            self.assertEqual(paths["Qwen Code"], str(home / ".qwen/skills"))
+            self.assertEqual(paths["TRAE"], str(home / ".trae/skills"))
+            self.assertEqual(paths["TRAE CN"], str(home / ".trae-cn/skills"))
+            self.assertFalse((home / ".kimi-code").exists())
+
     def test_markdown_is_chinese_and_marks_read_only(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)

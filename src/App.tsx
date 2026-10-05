@@ -88,6 +88,7 @@ function demoSnapshot(): CenterSnapshot {
       name,
       detected: index < 2,
       skillsPath: `~/.${name.toLowerCase().split(' ')[0]}/skills`,
+      readsCenter: false,
       linkedCount: index < 2 ? skills.length : 0,
       conflictCount: 0,
     })),
@@ -481,7 +482,7 @@ function ToolsPage({ snapshot, locale }: { snapshot: CenterSnapshot; locale: Loc
             <div className="tool-monogram">{tool.name.slice(0, 2).toUpperCase()}</div>
             <div><h3>{tool.name}</h3><code>{tool.skillsPath}</code></div>
             <span className={tool.detected ? 'detected-label' : 'muted-label'}>{tool.detected ? t.detected : t.notDetected}</span>
-            <dl><div><dt>{t.connected}</dt><dd>{tool.linkedCount}</dd></div><div><dt>{t.conflict}</dt><dd>{tool.conflictCount}</dd></div></dl>
+            <dl><div><dt>{tool.readsCenter ? t.readsCenter : t.connected}</dt><dd>{tool.linkedCount}</dd></div><div><dt>{t.conflict}</dt><dd>{tool.conflictCount}</dd></div></dl>
           </article>
         ))}
       </div>
@@ -679,14 +680,15 @@ function SkillDrawer({ skill, tools, locale, workingKey, onClose, onConnection, 
               {tools.map((tool) => {
                 const connection = skill.connections.find((item) => item.toolId === tool.id)
                 const connected = connection?.mode === 'link' || connection?.mode === 'copy'
+                const native = connection?.mode === 'native'
                 const independent = connection?.mode === 'conflict'
                 const broken = connection?.mode === 'broken'
                 const protectedEntry = independent || broken
-                const status = broken ? t.brokenLink : independent ? t.unmanaged : connected ? t.connected : tool.detected ? t.notLinked : t.notDetected
-                const action = broken ? t.needsReview : independent ? t.preserveEntry : connected ? t.disconnect : t.connect
+                const status = native ? t.readsCenter : broken ? t.brokenLink : independent ? t.unmanaged : connected ? t.connected : tool.detected ? t.notLinked : t.notDetected
+                const action = native ? t.noLinkNeeded : broken ? t.needsReview : independent ? t.preserveEntry : connected ? t.disconnect : t.connect
                 const busy = workingKey === `${skill.id}:${tool.id}`
                 return (
-                  <div key={tool.id}><span className="tool-mini">{tool.name.slice(0, 2).toUpperCase()}</span><span><strong>{tool.name}</strong><small>{status}</small></span><button className={connected ? 'disconnect' : ''} disabled={busy || protectedEntry || !isDesktopRuntime()} onClick={() => void onConnection(skill.id, tool.id, connected)}>{busy ? <LoaderCircle className="spin" size={14} /> : protectedEntry ? <ShieldCheck size={14} /> : connected ? <Unlink size={14} /> : <Link2 size={14} />}{action}</button></div>
+                  <div key={tool.id}><span className="tool-mini">{tool.name.slice(0, 2).toUpperCase()}</span><span><strong>{tool.name}</strong><small>{status}</small></span><button className={connected ? 'disconnect' : ''} disabled={busy || native || protectedEntry || !isDesktopRuntime()} onClick={() => void onConnection(skill.id, tool.id, connected)}>{busy ? <LoaderCircle className="spin" size={14} /> : native ? <Check size={14} /> : protectedEntry ? <ShieldCheck size={14} /> : connected ? <Unlink size={14} /> : <Link2 size={14} />}{action}</button></div>
                 )
               })}
             </div>

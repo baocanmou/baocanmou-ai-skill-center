@@ -75,6 +75,7 @@ pub struct ToolStatus {
     pub name: String,
     pub detected: bool,
     pub skills_path: String,
+    pub reads_center: bool,
     pub linked_count: usize,
     pub conflict_count: usize,
 }
@@ -120,61 +121,150 @@ struct TranslationStore {
 struct ToolSpec {
     id: &'static str,
     name: &'static str,
+    /// Root directory relative to the home directory (`%USERPROFILE%` on Windows).
     root: &'static str,
     skills_dir: &'static str,
+    /// Environment variable that relocates the root to an absolute path, when the tool supports one.
+    root_env: Option<&'static str>,
+    /// The tool scans the default shared center (`~/.agents/skills`) by itself, so a second
+    /// managed link would load the same skill twice.
+    reads_shared_center: bool,
 }
 
-fn tool_specs() -> [ToolSpec; 8] {
+fn tool_specs() -> [ToolSpec; 13] {
     [
         ToolSpec {
             id: "codex",
             name: "Codex",
             root: ".codex",
             skills_dir: "skills",
+            root_env: None,
+            reads_shared_center: false,
         },
         ToolSpec {
             id: "claude",
             name: "Claude Code",
             root: ".claude",
             skills_dir: "skills",
+            root_env: None,
+            reads_shared_center: false,
         },
         ToolSpec {
             id: "gemini",
             name: "Gemini CLI",
             root: ".gemini",
             skills_dir: "skills",
+            root_env: None,
+            reads_shared_center: false,
         },
         ToolSpec {
             id: "cursor",
             name: "Cursor",
             root: ".cursor",
             skills_dir: "skills",
+            root_env: None,
+            reads_shared_center: false,
         },
         ToolSpec {
             id: "hermes",
             name: "Hermes",
             root: ".hermes",
             skills_dir: "skills",
+            root_env: None,
+            reads_shared_center: false,
         },
         ToolSpec {
             id: "zcode",
             name: "ZCode",
             root: ".zcode",
             skills_dir: "skills",
+            root_env: None,
+            reads_shared_center: false,
         },
         ToolSpec {
             id: "opencode",
             name: "OpenCode",
             root: ".config/opencode",
             skills_dir: "skills",
+            root_env: None,
+            reads_shared_center: false,
         },
         ToolSpec {
             id: "windsurf",
             name: "Windsurf",
             root: ".windsurf",
             skills_dir: "skills",
+            root_env: None,
+            reads_shared_center: false,
+        },
+        ToolSpec {
+            id: "kimi-code",
+            name: "Kimi Code CLI",
+            root: ".kimi-code",
+            skills_dir: "skills",
+            root_env: Some("KIMI_CODE_HOME"),
+            reads_shared_center: true,
+        },
+        ToolSpec {
+            id: "comate",
+            name: "文心快码 Comate",
+            root: ".comate",
+            skills_dir: "skills",
+            root_env: None,
+            reads_shared_center: false,
+        },
+        ToolSpec {
+            id: "qwen-code",
+            name: "Qwen Code",
+            root: ".qwen",
+            skills_dir: "skills",
+            root_env: None,
+            reads_shared_center: false,
+        },
+        ToolSpec {
+            id: "trae",
+            name: "TRAE",
+            root: ".trae",
+            skills_dir: "skills",
+            root_env: None,
+            reads_shared_center: false,
+        },
+        ToolSpec {
+            id: "trae-cn",
+            name: "TRAE CN",
+            root: ".trae-cn",
+            skills_dir: "skills",
+            root_env: None,
+            reads_shared_center: false,
         },
     ]
+}
+
+fn tool_root(tool: &ToolSpec, home: &Path) -> PathBuf {
+    resolve_tool_root(home, tool.root, tool.root_env.and_then(std::env::var_os))
+}
+
+fn resolve_tool_root(
+    home: &Path,
+    root: &str,
+    override_root: Option<std::ffi::OsString>,
+) -> PathBuf {
+    override_root
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home.join(root))
+}
+
+fn tool_skills_path(tool: &ToolSpec, home: &Path) -> PathBuf {
+    tool_root(tool, home).join(tool.skills_dir)
+}
+
+/// True when the tool already discovers every center skill on its own. This only holds while
+/// the center is the default `~/.agents/skills`; a custom `BAOCANMOU_SKILLS_HOME` falls back to
+/// ordinary managed links.
+fn reads_center_directly(tool: &ToolSpec, home: &Path, center: &Path) -> bool {
+    tool.reads_shared_center
+        && canonical_or_clean(center) == canonical_or_clean(&home.join(".agents").join("skills"))
 }
 
 pub fn scan() -> io::Result<CenterSnapshot> {
@@ -310,7 +400,17 @@ pub fn connect(skill_id: &str, tool_id: &str) -> io::Result<()> {
     let source = center.join(skill_id);
     ensure_skill_path(&center, &source.join(SKILL_FILE))?;
     let spec = find_tool(tool_id)?;
-    let target_dir = home.join(spec.root).join(spec.skills_dir);
+    if reads_center_directly(&spec, &home, &center) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!(
+                "{} already reads {} directly; no link is needed",
+                spec.name,
+                display_path(&center)
+            ),
+        ));
+    }
+    let target_dir = tool_skills_path(&spec, &home);
     let target = target_dir.join(skill_id);
     fs::create_dir_all(&target_dir)?;
 
@@ -337,7 +437,7 @@ pub fn disconnect(skill_id: &str, tool_id: &str) -> io::Result<()> {
     let home = home_root()?;
     let source = center.join(skill_id);
     let spec = find_tool(tool_id)?;
-    let target = home.join(spec.root).join(spec.skills_dir).join(skill_id);
+    let target = tool_skills_path(&spec, &home).join(skill_id);
 
     match connection_mode(&source, &target) {
         ConnectionMode::None => Ok(()),
@@ -480,10 +580,15 @@ fn inspect_skill(
     let connections = tool_specs()
         .iter()
         .map(|tool| {
-            let target = home.join(tool.root).join(tool.skills_dir).join(id);
+            let mode = if reads_center_directly(tool, home, center) {
+                "native"
+            } else {
+                let target = tool_skills_path(tool, home).join(id);
+                connection_mode(path, &target).as_str()
+            };
             SkillConnection {
                 tool_id: tool.id.to_owned(),
-                mode: connection_mode(path, &target).as_str().to_owned(),
+                mode: mode.to_owned(),
             }
         })
         .collect::<Vec<_>>();
@@ -534,24 +639,35 @@ fn inspect_tools(home: &Path, center: &Path, skills: &[SkillAsset]) -> Vec<ToolS
     tool_specs()
         .iter()
         .map(|tool| {
-            let root = home.join(tool.root);
+            let root = tool_root(tool, home);
             let skills_path = root.join(tool.skills_dir);
+            let reads_center = reads_center_directly(tool, home, center);
             let mut linked_count = 0;
             let mut conflict_count = 0;
             for skill in skills {
                 let source = center.join(&skill.id);
                 let target = skills_path.join(&skill.id);
-                match connection_mode(&source, &target) {
-                    ConnectionMode::Link | ConnectionMode::Copy => linked_count += 1,
-                    ConnectionMode::Broken | ConnectionMode::Conflict => conflict_count += 1,
-                    ConnectionMode::None => {}
+                match (reads_center, connection_mode(&source, &target)) {
+                    // Direct readers already see every center skill; a same-name entry in their
+                    // own directory is a duplicate to review, never something to create.
+                    (true, ConnectionMode::None) => linked_count += 1,
+                    (true, _) => {
+                        linked_count += 1;
+                        conflict_count += 1;
+                    }
+                    (false, ConnectionMode::Link | ConnectionMode::Copy) => linked_count += 1,
+                    (false, ConnectionMode::Broken | ConnectionMode::Conflict) => {
+                        conflict_count += 1
+                    }
+                    (false, ConnectionMode::None) => {}
                 }
             }
             ToolStatus {
                 id: tool.id.to_owned(),
                 name: tool.name.to_owned(),
                 detected: root.exists(),
-                skills_path: display_path(&skills_path),
+                skills_path: display_path(if reads_center { center } else { &skills_path }),
+                reads_center,
                 linked_count,
                 conflict_count,
             }
@@ -1530,6 +1646,91 @@ mod tests {
         assert_eq!(first_three_styles.len(), 3);
 
         fs::remove_dir_all(root).expect("remove preview fixture");
+    }
+
+    #[test]
+    fn host_table_has_unique_ids_and_domestic_paths() {
+        let specs = tool_specs();
+        let ids = specs.iter().map(|tool| tool.id).collect::<HashSet<_>>();
+        assert_eq!(ids.len(), specs.len());
+        let home = Path::new("/home/demo");
+        let paths = specs
+            .iter()
+            .map(|tool| {
+                (
+                    tool.id,
+                    resolve_tool_root(home, tool.root, None).join(tool.skills_dir),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        assert_eq!(paths["kimi-code"], home.join(".kimi-code/skills"));
+        assert_eq!(paths["comate"], home.join(".comate/skills"));
+        assert_eq!(paths["qwen-code"], home.join(".qwen/skills"));
+        assert_eq!(paths["trae"], home.join(".trae/skills"));
+        assert_eq!(paths["trae-cn"], home.join(".trae-cn/skills"));
+        let direct = specs
+            .iter()
+            .filter(|tool| tool.reads_shared_center)
+            .map(|tool| tool.id)
+            .collect::<Vec<_>>();
+        assert_eq!(direct, ["kimi-code"]);
+    }
+
+    #[test]
+    fn tool_root_honours_a_non_empty_override() {
+        let home = Path::new("/home/demo");
+        assert_eq!(
+            resolve_tool_root(home, ".kimi-code", Some("/data/kimi".into())),
+            PathBuf::from("/data/kimi")
+        );
+        assert_eq!(
+            resolve_tool_root(home, ".kimi-code", Some("".into())),
+            home.join(".kimi-code")
+        );
+    }
+
+    #[test]
+    fn direct_readers_use_the_default_center_without_links() {
+        let home = tempfile::tempdir().unwrap();
+        let center = home.path().join(".agents/skills");
+        let skill = center.join("demo");
+        fs::create_dir_all(&skill).unwrap();
+        fs::write(
+            skill.join(SKILL_FILE),
+            "---\nname: demo\ndescription: Test\n---",
+        )
+        .unwrap();
+        let kimi = find_tool("kimi-code").unwrap();
+        let qwen = find_tool("qwen-code").unwrap();
+        assert!(reads_center_directly(&kimi, home.path(), &center));
+        assert!(!reads_center_directly(&qwen, home.path(), &center));
+        let custom = home.path().join("custom-center");
+        assert!(!reads_center_directly(&kimi, home.path(), &custom));
+
+        let asset = inspect_skill(
+            &center,
+            home.path(),
+            "demo",
+            &skill,
+            &TranslationStore::default(),
+        );
+        let mode = |id: &str| {
+            asset
+                .connections
+                .iter()
+                .find(|item| item.tool_id == id)
+                .map(|item| item.mode.clone())
+        };
+        assert_eq!(mode("kimi-code").as_deref(), Some("native"));
+        assert_eq!(mode("qwen-code").as_deref(), Some("none"));
+
+        let tools = inspect_tools(home.path(), &center, std::slice::from_ref(&asset));
+        let kimi_status = tools.iter().find(|tool| tool.id == "kimi-code").unwrap();
+        assert!(kimi_status.reads_center);
+        assert_eq!(kimi_status.skills_path, display_path(&center));
+        assert_eq!(kimi_status.linked_count, 1);
+        assert_eq!(kimi_status.conflict_count, 0);
+        assert!(!home.path().join(".kimi-code").exists());
     }
 
     #[test]

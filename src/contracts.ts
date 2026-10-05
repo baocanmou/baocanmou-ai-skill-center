@@ -2,7 +2,7 @@ export type Locale = 'zh' | 'en'
 
 export interface SkillConnection {
   toolId: string
-  mode: 'none' | 'link' | 'copy' | 'broken' | 'conflict'
+  mode: 'none' | 'link' | 'copy' | 'native' | 'broken' | 'conflict'
 }
 
 export interface SkillAsset {
@@ -35,6 +35,7 @@ export interface ToolStatus {
   name: string
   detected: boolean
   skillsPath: string
+  readsCenter: boolean
   linkedCount: number
   conflictCount: number
 }

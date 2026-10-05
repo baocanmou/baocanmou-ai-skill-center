@@ -6,7 +6,7 @@
 
 [简体中文](README.md) · [English](README.en.md)
 
-[![Version](https://img.shields.io/badge/version-v1.3.0-111111)](https://github.com/baocanmou/baocanmou-ai-skill-center/releases/tag/v1.3.0)
+[![Version](https://img.shields.io/badge/version-v1.4.0-111111)](https://github.com/baocanmou/baocanmou-ai-skill-center/releases/tag/v1.4.0)
 [![License](https://img.shields.io/badge/license-MIT-111111)](LICENSE)
 [![CI](https://github.com/baocanmou/baocanmou-ai-skill-center/actions/workflows/ci.yml/badge.svg)](https://github.com/baocanmou/baocanmou-ai-skill-center/actions/workflows/ci.yml)
 [![Gitee mirror](https://img.shields.io/badge/Gitee-China%20mirror-c71d23)](https://gitee.com/baocanmou/baocanmou-ai-skill-center)
@@ -17,7 +17,7 @@ A macOS / Windows desktop app that turns the AI skills in your local `~/.agents/
 
 - **You have dozens or hundreds of local skills and can't remember their IDs**: browse by task such as "Presentations" or "Design & images", or search in plain language.
 - **Several skills look alike**: each card states the primary use and features, and separates task skills, slide-image styles, UI styles, and methods.
-- **You want one set of skills across several AI tools**: link the same center source to Codex, Claude Code, Gemini CLI, Cursor, and others instead of keeping copies.
+- **You want one set of skills across several AI tools**: link the same center source to Codex, Claude Code, Gemini CLI, Cursor, Baidu Comate, Qwen Code, TRAE, and others instead of keeping copies.
 - **Teammates prefer Chinese**: Chinese names and descriptions can be corrected in the app without touching the original `SKILL.md`.
 
 ## What it does
@@ -27,7 +27,7 @@ A macOS / Windows desktop app that turns the AI skills in your local `~/.agents/
 - **Get a ready-to-copy example**: the detail view lists what to prepare, the scope, and a bilingual request template; fill in the bracketed fields and send it to your AI.
 - **See real examples**: when a skill folder ships PNG/JPG/WebP/GIF files, the detail view shows up to four; fewer than three are labeled honestly and never padded with other images.
 - **Correct the Chinese text**: edits are stored only in the local `~/.baocanmou/skill-center/translations.json`.
-- **Connect AI tools**: Codex, Claude Code, Gemini CLI, Cursor, Hermes, ZCode, OpenCode, and Windsurf; symlinks on macOS/Linux, and a copy with a management marker when a Windows link fails.
+- **Connect AI tools**: Codex, Claude Code, Gemini CLI, Cursor, Hermes, ZCode, OpenCode, Windsurf, plus Chinese coding tools Baidu Comate (文心快码), Qwen Code, and TRAE (global and TRAE CN); symlinks on macOS/Linux, and a copy with a management marker when a Windows link fails. Kimi Code CLI already reads `~/.agents/skills`, so it is shown as “Reads the center directly” and no extra link is created, which keeps each skill from loading twice. Paths per tool are listed in the [compatibility table](skills/baocanmou-ai-skill-center/references/兼容路径.md).
 - **Discover external skills**: the Discover view lists public metrics, original sources, and a BaoCanMou recommendation score only. It does not bundle or automatically install third-party skills.
 - **Checks & notes**: shows structural checks and static risk signals; these are not security certification.
 
@@ -59,14 +59,14 @@ The Fangce score is not a security certification, quality promise, or user ratin
 
 ## Download and install
 
-Download the package for your system from [Releases v1.3.0](https://github.com/baocanmou/baocanmou-ai-skill-center/releases/tag/v1.3.0):
+Download the package for your system from [Releases v1.4.0](https://github.com/baocanmou/baocanmou-ai-skill-center/releases/tag/v1.4.0):
 
 | Package | System | Chip |
 |---|---|---|
-| `BaoCanMou-AI-Skill-Center_1.3.0_darwin_aarch64.dmg` | macOS | Apple silicon (M1 and later) |
-| `BaoCanMou-AI-Skill-Center_1.3.0_darwin_x64.dmg` | macOS | Intel |
-| `BaoCanMou-AI-Skill-Center_1.3.0_windows_x64-setup.exe` | Windows | x64 (most Intel / AMD PCs) |
-| `BaoCanMou-AI-Skill-Center_1.3.0_windows_arm64-setup.exe` | Windows | ARM64 |
+| `BaoCanMou-AI-Skill-Center_1.4.0_darwin_aarch64.dmg` | macOS | Apple silicon (M1 and later) |
+| `BaoCanMou-AI-Skill-Center_1.4.0_darwin_x64.dmg` | macOS | Intel |
+| `BaoCanMou-AI-Skill-Center_1.4.0_windows_x64-setup.exe` | Windows | x64 (most Intel / AMD PCs) |
+| `BaoCanMou-AI-Skill-Center_1.4.0_windows_arm64-setup.exe` | Windows | ARM64 |
 
 macOS: open the DMG and drag “包参谋 AI 技能中心” into Applications.
 
@@ -153,7 +153,7 @@ Click “Scan again” in the top-right corner.
 
 ## Versions and updates
 
-Current version **v1.3.0** (2026-09-30): Home now offers nine task entry points and common-work shortcuts; every skill has preparation guidance, scope notes, and bilingual request templates; text is larger, with source text and connection details in expandable sections; slide-image styles are kept separate from editable presentation workflows.
+Current version **v1.4.0** (2026-10-05): Adds Chinese AI coding tools. Baidu Comate, Qwen Code, TRAE, and TRAE CN can be linked to the shared skills; Kimi Code CLI is recognized as reading the center directly, so no duplicate link is made. The previous release, v1.3.0 (2026-09-30), introduced task-based entry points and bilingual request templates for every skill.
 
 - Changelog: [CHANGELOG.md](CHANGELOG.md) · [Chinese changelog](docs/CHANGELOG.zh.md)
 - All versions: [Releases](https://github.com/baocanmou/baocanmou-ai-skill-center/releases)

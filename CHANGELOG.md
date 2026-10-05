@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0] - 2026-10-05
+
+- Added Chinese AI coding tools to the host table: Baidu Comate (`~/.comate/skills`), Qwen Code (`~/.qwen/skills`), TRAE (`~/.trae/skills`), and TRAE CN (`~/.trae-cn/skills`). On Windows the same folders sit under `%USERPROFILE%`.
+- Added Kimi Code CLI as a direct reader of `~/.agents/skills`: it is shown as "Reads the center directly" and the app refuses to create a second link that would load each skill twice. With a custom `BAOCANMOU_SKILLS_HOME`, it falls back to an ordinary link under `$KIMI_CODE_HOME/skills` (default `~/.kimi-code/skills`).
+- Tool roots can now follow a tool's own home-directory environment variable (`KIMI_CODE_HOME`).
+- The read-only audit now also lists Windsurf and the five new hosts.
+- Paths come from each vendor's documentation; a detected folder or a created link is not proof that the tool loaded the skill.
+
 ## [1.3.0] - 2026-09-30
 
 - Replaced the metric-led home page with nine task-based entry points and six common-work shortcuts.

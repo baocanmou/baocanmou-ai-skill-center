@@ -1,6 +1,6 @@
 ---
 name: baocanmou-ai-skill-center
-description: 使用包参谋「方策五环」盘点、中文化、评估、编组和验收 Codex、Claude Code、Hermes、Gemini、Cursor、ZCode、OpenCode 等 AI 工具的共享技能。当用户提到技能库、中文解释、用途、特点、截图预览、SKILL.md、多 AI 共用、技能链接、审计、冲突、断链或回滚时使用。
+description: 使用包参谋「方策五环」盘点、中文化、评估、编组和验收 Codex、Claude Code、Hermes、Gemini、Cursor、ZCode、OpenCode、Windsurf、Kimi Code CLI、文心快码 Comate、Qwen Code、TRAE 等 AI 工具的共享技能。当用户提到技能库、中文解释、用途、特点、截图预览、SKILL.md、多 AI 共用、技能链接、审计、冲突、断链或回滚时使用。
 ---
 
 # 包参谋 AI 技能中心

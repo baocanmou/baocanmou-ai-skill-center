@@ -1,5 +1,12 @@
 # 中文更新记录
 
+## v1.4.0 国产工具接入 · 2026-10-05
+
+- 新增文心快码 Comate（`~/.comate/skills`）、通义千问 Qwen Code（`~/.qwen/skills`）、TRAE（`~/.trae/skills`）、TRAE CN（`~/.trae-cn/skills`）；Windows 对应 `%USERPROFILE%` 下的同名目录。
+- 新增 Kimi Code CLI：它自己读取 `~/.agents/skills`，界面显示“直接读取中心源”，不再另建链接，避免同一技能加载两份；若用 `BAOCANMOU_SKILLS_HOME` 改了中心源，则退回普通连接，入口为 `$KIMI_CODE_HOME/skills`（默认 `~/.kimi-code/skills`）。
+- 只读审计补充 Windsurf 与以上五个工具的入口检查。
+- 路径依据各厂商官方文档；检测到目录或已建链接，不等于该工具已实际加载技能。
+
 ## v1.3.0 易读版 · 2026-09-30
 
 - 首页改为 9 个用途入口和 6 个常见工作入口，不再把数量与评分放在第一位。

@@ -6,7 +6,7 @@
 
 [简体中文](README.md) · [English](README.en.md)
 
-[![版本](https://img.shields.io/badge/版本-v1.3.0-111111)](https://github.com/baocanmou/baocanmou-ai-skill-center/releases/tag/v1.3.0)
+[![版本](https://img.shields.io/badge/版本-v1.4.0-111111)](https://github.com/baocanmou/baocanmou-ai-skill-center/releases/tag/v1.4.0)
 [![许可](https://img.shields.io/badge/许可-MIT-111111)](LICENSE)
 [![CI](https://github.com/baocanmou/baocanmou-ai-skill-center/actions/workflows/ci.yml/badge.svg)](https://github.com/baocanmou/baocanmou-ai-skill-center/actions/workflows/ci.yml)
 [![Gitee 镜像](https://img.shields.io/badge/Gitee-国内镜像-c71d23)](https://gitee.com/baocanmou/baocanmou-ai-skill-center)
@@ -17,7 +17,7 @@
 
 - **本机装了几十上百个技能，记不住英文名**：按「做 PPT」「设计与画图」等用途找，或直接搜中文需求。
 - **几个技能看起来差不多**：卡片直接写主要用途和特点，并区分任务技能、PPT 配图风格、界面风格和方法辅助。
-- **想把同一套技能给多个 AI 工具用**：从同一个中心源连接到 Codex、Claude Code、Gemini CLI、Cursor 等，不必各存一份。
+- **想把同一套技能给多个 AI 工具用**：从同一个中心源连接到 Codex、Claude Code、Gemini CLI、Cursor、文心快码、通义千问 Qwen Code、TRAE 等，不必各存一份。
 - **团队里有人不熟悉英文技能说明**：中文名称和说明可以在应用内校正，不改动原始 `SKILL.md`。
 
 ## 能做什么
@@ -27,7 +27,7 @@
 - **拿到可复制的使用示例**：详情页写明先准备什么、适用范围，并给出中英文调用示例，复制后填写【】里的内容即可发给 AI。
 - **查看真实案例图**：技能目录自带 PNG/JPG/WebP/GIF 时，详情最多展示 4 张；不足 3 张时如实标注，不用其他图片补数。
 - **校正中文说明**：修改内容只写入本机 `~/.baocanmou/skill-center/translations.json`。
-- **连接 AI 工具**：支持 Codex、Claude Code、Gemini CLI、Cursor、Hermes、ZCode、OpenCode、Windsurf；macOS/Linux 用软链接，Windows 链接失败时改用带管理标记的副本。
+- **连接 AI 工具**：支持 Codex、Claude Code、Gemini CLI、Cursor、Hermes、ZCode、OpenCode、Windsurf，以及国产工具文心快码 Comate、通义千问 Qwen Code、TRAE（国际版与国内版 TRAE CN）；macOS/Linux 用软链接，Windows 链接失败时改用带管理标记的副本。Kimi Code CLI 本身就读取 `~/.agents/skills`，显示为“直接读取中心源”，不再另建链接，避免同一技能加载两份。各工具的目录见[兼容路径](skills/baocanmou-ai-skill-center/references/兼容路径.md)。
 - **发现外部技能**：「发现技能」只列公开指标、原始来源和包参谋推荐分，不打包、不自动安装第三方技能。
 - **检查与说明**：显示结构检查和静态风险提示；这些提示不等于安全认证。
 
@@ -59,14 +59,14 @@
 
 ## 下载安装
 
-从 [v1.3.0 Releases](https://github.com/baocanmou/baocanmou-ai-skill-center/releases/tag/v1.3.0) 下载对应安装包：
+从 [v1.4.0 Releases](https://github.com/baocanmou/baocanmou-ai-skill-center/releases/tag/v1.4.0) 下载对应安装包：
 
 | 安装包 | 系统 | 芯片 |
 |---|---|---|
-| `BaoCanMou-AI-Skill-Center_1.3.0_darwin_aarch64.dmg` | macOS | Apple 芯片（M1 及以后） |
-| `BaoCanMou-AI-Skill-Center_1.3.0_darwin_x64.dmg` | macOS | Intel 芯片 |
-| `BaoCanMou-AI-Skill-Center_1.3.0_windows_x64-setup.exe` | Windows | x64（常见 Intel / AMD 电脑） |
-| `BaoCanMou-AI-Skill-Center_1.3.0_windows_arm64-setup.exe` | Windows | ARM64 |
+| `BaoCanMou-AI-Skill-Center_1.4.0_darwin_aarch64.dmg` | macOS | Apple 芯片（M1 及以后） |
+| `BaoCanMou-AI-Skill-Center_1.4.0_darwin_x64.dmg` | macOS | Intel 芯片 |
+| `BaoCanMou-AI-Skill-Center_1.4.0_windows_x64-setup.exe` | Windows | x64（常见 Intel / AMD 电脑） |
+| `BaoCanMou-AI-Skill-Center_1.4.0_windows_arm64-setup.exe` | Windows | ARM64 |
 
 macOS：打开 DMG，把「包参谋 AI 技能中心」拖进「应用程序」。
 
@@ -153,7 +153,7 @@ cargo run --manifest-path src-tauri/Cargo.toml -- --inspect-summary
 
 ## 版本与更新
 
-当前版本 **v1.3.0**（2026-09-30）：首页改为 9 个用途入口和常见工作快捷入口；每个技能增加准备说明、适用范围和中英文调用示例；字号加大，原文和连接信息改为按需展开；PPT 配图风格与可编辑 PPT 工作流分开。
+当前版本 **v1.4.0**（2026-10-05）：新增国产 AI 编程工具接入——文心快码 Comate、通义千问 Qwen Code、TRAE 与 TRAE CN 可一键连接共享技能；Kimi Code CLI 识别为直接读取中心源，不重复建链接。上一版 v1.3.0（2026-09-30）改为按用途找技能，并为每个技能加了中英文调用示例。
 
 - 更新记录：[CHANGELOG.md](CHANGELOG.md) · [中文更新记录](docs/CHANGELOG.zh.md)
 - 全部版本：[Releases](https://github.com/baocanmou/baocanmou-ai-skill-center/releases)
